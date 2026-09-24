@@ -1,24 +1,17 @@
 # CertiGuard Demo
 
-Static, Vercel-ready demonstration interface for the proposed **CertiGuard Academic Certificate Verification System**.
+Interactive static prototype of the CertiGuard Academic Certificate Verification System.
 
-## Important
-This project is a **simulation for demonstration purposes**. OCR confidence, computer-vision/tamper analysis, fraud-risk scores, XAI heatmaps and classifications shown by the interface are not measured model results and must not be reported as experimental evidence.
+## What is live in the browser
+- file selection and image/PDF preview
+- file size/type/last-modified metadata
+- SHA-256 fingerprint calculated from the uploaded file bytes
+- editable extracted-field review workflow
+- deterministic matching against demo institution records
+- session audit trail and printable verification report
 
-## Demo workflow
-1. Login/dashboard representation
-2. Upload JPG/PNG/PDF certificate
-3. Simulated OCR extraction and user correction
-4. Simulated institution-record cross-validation
-5. Simulated visual-tampering check
-6. Simulated fraud-risk scoring
-7. XAI explanation/illustrative heatmap
-8. Verification result and printable report
-9. Administrator override
-10. Institution-record management and audit log
+## What is demonstrated, not experimentally measured
+The OCR extraction, CV tamper probability, ML fraud-risk score and XAI heatmap are interface simulations. They are deliberately labelled so the prototype does not present invented model performance as research evidence. A production implementation would connect the UI to the FastAPI/AI backend.
 
-## Deploy to Vercel
-Upload all repository files to GitHub. In Vercel, import the GitHub repository. No build command or framework configuration is required because this is a static HTML/CSS/JavaScript project.
-
-## Local use
-Open `index.html` in a browser.
+## Vercel
+No build step is required. Set the project Root Directory to `CertiGuard-Demo` if this folder is nested in the GitHub repository, then deploy as a static site.
