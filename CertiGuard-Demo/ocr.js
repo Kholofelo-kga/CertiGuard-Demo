@@ -49,7 +49,7 @@
   function detectType(t) {
     const academic = (t.match(/\b(diploma|bachelor|b\.?sc|b\.?com|honours|master|doctor|degree|higher certificate|national certificate|advanced certificate)\b/gi) || []).length;
     const body = /\b(university|college|institute|academy|school of)\b/i.test(t);
-    const conf = (t.match(/\b(conference|symposium|workshop|proceedings|participation|participated|attendance|attended|presenter|presented|keynote|summit|seminar|webinar)\b/gi) || []).length;
+    const conf = (t.match(/\b(conference|symposium|workshop|proceedings|participation|participated|attendance|attended|presenter|presented|keynote|summit|seminar|webinar|presentation|program chair|organi[sz]ing|poster|paper|certificate of appreciation)\b/gi) || []).length;
     const prof = (t.match(/\b(certified|certification|credential|exam|microsoft|aws|cisco|comptia|pmi|oracle|issued by)\b/gi) || []).length;
     if (academic >= 1 && body && academic >= conf) return "academic";
     if (conf >= 1) return "conference";
