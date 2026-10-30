@@ -42,7 +42,7 @@
       const factors = []; let total = 0;
       for (const k of ["number", "name", "qualification", "institution", "date"]) {
         const st = xv.fields[k].status;
-        if (k === "number" && xv.missingNumber) { total += W.number; factors.push({ key: k, points: W.number, text: "No certificate number on the document, so the record could not be located: authenticity cannot be confirmed" }); continue; }
+        if (k === "number" && xv.missingNumber) { total += W.number; factors.push({ key: k, points: W.number, text: "Certificate number not found or not reliably identified, so the record could not be located: authenticity not confirmed" }); continue; }
         if (st === "Matched") continue;
         // when the certificate number is unknown, the other fields cannot be compared; do not double count
         if (st === "Not Found" && k !== "number") continue;
@@ -59,9 +59,10 @@
       let cls = total >= 70 ? "Forged" : total >= 30 ? "Suspicious" : "Genuine";
       // Safety rule: a result is Genuine only if all five fields match the institution record.
       if (cls === "Genuine" && Object.values(xv.fields).some(f => f.status !== "Matched")) cls = "Suspicious";
+      const noNum = xv.missingNumber && cls !== "Genuine";
       const text = cls === "Genuine"
         ? "All checked fields match the institution record and no clustered edit evidence was found."
-        : "Classified " + cls + " mainly because: " + factors.filter(f => f.points > 0).sort((a, b) => b.points - a.points).slice(0, 2).map(f => f.text.charAt(0).toLowerCase() + f.text.slice(1)).join("; ") + ".";
+        : (noNum ? "Manual review required, authenticity not confirmed. " : "") + "Classified " + cls + " mainly because: " + factors.filter(f => f.points > 0).sort((a, b) => b.points - a.points).slice(0, 2).map(f => f.text.charAt(0).toLowerCase() + f.text.slice(1)).join("; ") + ".";
       return { score: total, classification: cls, factors, explanation: text };
     }
   };

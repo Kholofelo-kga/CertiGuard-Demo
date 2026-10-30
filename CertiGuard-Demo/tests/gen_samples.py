@@ -128,3 +128,25 @@ def diploma_no_number():
     arr = np.asarray(img).astype(np.float32) + np.random.normal(0, 1.5, (H, W, 3)); return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
 jpeg(diploma_no_number(), 85).save("samples/sample-6-academic-no-number.jpg", "JPEG", quality=85)
 print("document-type samples written")
+
+# ---- hard case: approximates a real scanned diploma layout (wrapped title, ALL-CAPS name, birth date, other identifiers, low resolution) ----
+def hard_diploma():
+    img = Image.new("RGB", (W, H), PAPER); dr = ImageDraw.Draw(img)
+    dr.rectangle([30, 30, W - 30, H - 30], outline=(20, 90, 60), width=6)
+    centre(dr, 90, "TSHWANE UNIVERSITY", F("DejaVuSerif-Bold.ttf", 44), (20, 90, 60))
+    centre(dr, 150, "OF TECHNOLOGY", F("DejaVuSerif-Bold.ttf", 44), (20, 90, 60))
+    centre(dr, 270, "This is to certify that", F("DejaVuSerif.ttf", 26))
+    centre(dr, 320, "THABO MOKGOSI", F("DejaVuSerif-Bold.ttf", 44))
+    dr.text((130, 410), "Identity number 219745761", font=F("DejaVuSans.ttf", 22), fill=(25, 25, 25))
+    dr.text((130, 445), "Date of birth 2000-04-06", font=F("DejaVuSans.ttf", 22), fill=(25, 25, 25))
+    centre(dr, 520, "has been awarded the", F("DejaVuSerif.ttf", 26))
+    centre(dr, 575, "ADVANCED DIPLOMA", F("DejaVuSerif-Bold.ttf", 34))
+    centre(dr, 625, "in Computer Science", F("DejaVuSerif-Bold.ttf", 30))
+    dr.text((130, 760), "Date 13 December 2024", font=F("DejaVuSans.ttf", 22), fill=(25, 25, 25))
+    dr.text((130, 800), "Ref AD12223", font=F("DejaVuSans.ttf", 20), fill=(25, 25, 25))
+    dr.ellipse([1020, 640, 1180, 800], outline=(150, 20, 20), width=5); dr.text((1062, 700), "SEAL", font=F("DejaVuSans-Bold.ttf", 28), fill=(150, 20, 20))
+    dr.rectangle([60, 60, 330, 120], outline=(200, 20, 20), width=3)   # red box that is NOT text
+    arr = np.asarray(img).astype(np.float32) + np.random.normal(0, 3, (H, W, 3)); img = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
+    return img.resize((int(W * 0.7), int(H * 0.7)), Image.LANCZOS)
+jpeg(hard_diploma(), 60).save("tests/eval/hard_tut_style.jpg", "JPEG", quality=60)
+print("hard-case sample written")

@@ -42,7 +42,7 @@
       const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
       const blobs = []; let first = null; const n = Math.min(doc.numPages, 3); // first three pages are read
       for (let i = 1; i <= n; i++) {
-        const page = await doc.getPage(i); const vp = page.getViewport({ scale: 2 });
+        const page = await doc.getPage(i); const vp = page.getViewport({ scale: 3 });
         const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height;
         await page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
         const blob = await new Promise(r => c.toBlob(r, "image/png")); blobs.push(blob); if (!first) first = { w: c.width, h: c.height };
@@ -106,14 +106,17 @@
   }
   function field(l, k, v) {
     const c = S.corrected.includes(k) ? ` <span class="badge suspicious">edited</span>` : "";
-    return `<label for="f_${k}">${l}${c}</label><input id="f_${k}" data-in="${k}" maxlength="100" value="${esc(v)}" placeholder="Not available" class="${S.errs[k] ? "field-err" : ""}"><div class="err" role="alert">${esc(S.errs[k] || "")}</div>`;
+    const e = S.ev && S.ev[k], chk = e && e.why.length ? ` <span class="badge suspicious">check</span>` : "";
+    const src = !v ? `<div class="evid">Not found on the document.</div>` : e ? `<div class="evid ${e.why.length ? "warn" : ""}">${e.text ? "Read from: “" + esc(e.text) + "”" + (e.conf != null ? " (OCR " + esc(e.conf) + "%)" : "") : "Read from the document text"}${e.why.length ? " — <b>check:</b> " + esc(e.why.join("; ")) : ""}</div>` : "";
+    return `<label for="f_${k}">${l}${c}${chk}</label>${src}<input id="f_${k}" data-in="${k}" maxlength="100" value="${esc(v)}" placeholder="Not available" class="${S.errs[k] ? "field-err" : ""}"><div class="err" role="alert">${esc(S.errs[k] || "")}</div>`;
   }
+  function uncertain() { return Object.keys(S.ev || {}).filter(k => S.ev[k] && S.ev[k].why.length && !S.corrected.includes(k)); }
   function reviewView() {
     const f = S.fields, o = S.ocr, url = S.prep.url;
     return layout(`<h1>Verify Certificate</h1>${steps(2)}<div class="grid2"><div class="panel"><h2>Document preview</h2><div class="preview"><img src="${esc(url)}" alt="Uploaded certificate preview"></div><div class="fields"><div><label>File name</label>${esc(S.info.name)}</div><div><label>File size</label>${(S.info.size / 1048576).toFixed(2)} MB</div></div><label>SHA-256</label><div class="hash">${esc(S.info.hash)}</div></div>
     <div class="panel"><div class="eyebrow">STEP 02</div><h2>Extracted certificate fields</h2><div class="notice">OCR confidence <b>${esc(o.confidence)}%</b> · read in ${esc(o.ms)} ms${o.pages ? " · " + esc(Math.min(o.pages, 3)) + " page(s) read" : ""}. Only text found on the document is filled in; anything not found is left empty ("Not available"). Check every field and correct OCR errors before verification (FR-04).</div>
     <label for="docType">Document type (detected from the text)</label><select id="docType" data-in="docType">${Object.keys(OCR.TYPES).map(k => `<option value="${k}" ${S.docType === k ? "selected" : ""}>${esc(OCR.TYPES[k])}</option>`).join("")}</select>
-    ${S.docType !== "academic" ? `<div class="notice">CertiGuard verifies <b>academic qualification</b> certificates only. This document will be reported as <b>Unsupported</b>, not as genuine or forged.</div>` : ""}${field("Student name", "name", f.name)}${field("Certificate number", "number", f.number)}${field("Qualification", "qualification", f.qualification)}${field("Institution", "institution", f.institution)}${field("Issue date (YYYY-MM-DD)", "date", f.date)}<button class="primary wide" data-act="confirm" style="margin-top:16px">Confirm Fields & Run Verification →</button></div></div>`, "verify");
+    ${S.docType !== "academic" ? `<div class="notice">CertiGuard verifies <b>academic qualification</b> certificates only. This document will be reported as <b>Unsupported</b>, not as genuine or forged.</div>` : ""}${field("Student name", "name", f.name)}${field("Certificate number", "number", f.number)}${field("Qualification", "qualification", f.qualification)}${field("Institution", "institution", f.institution)}${field("Issue date (YYYY-MM-DD)", "date", f.date)}${S.errs._chk ? `<div class="err" role="alert">${esc(S.errs._chk)}</div>` : ""}${uncertain().length ? `<label class="chkrow"><input type="checkbox" id="chk" data-in="chk"> I have checked the fields marked “check” against the document.</label>` : ""}<details class="rawocr"><summary>Original OCR text (what the system actually read)</summary><pre>${esc(o.text)}</pre>${o.meta.identifiers.length ? `<p class="sub">Other identifiers found but <b>not</b> assigned to any field: ${esc(o.meta.identifiers.join(", "))}</p>` : ""}</details><button class="primary wide" data-act="confirm" style="margin-top:16px">Confirm Fields & Run Verification →</button></div></div>`, "verify");
   }
   function analysingView() {
     const st = ["Cross-validation", "Integrity (ELA)", "Risk scoring", "Explanation & audit"];
@@ -133,8 +136,8 @@
     const flagged = [], img = S.prep;
     const boxes = Object.keys(r.xv.fields).map(k => {
       const l = r.lines && OCR.locate(r.lines, r.fields[k]); if (!l) return "";
-      const bad = r.xv.fields[k].status !== "Matched", b = { x0: l.bbox.x0 - 8, y0: l.bbox.y0 - 8, x1: l.bbox.x1 + 8, y1: l.bbox.y1 + 8 };
-      return `<div class="box ${bad ? "bad" : "good"}" title="${esc(Scoring.LABEL[k])}: ${esc(r.xv.fields[k].status)}" style="left:${b.x0 / img.w * 100}%;top:${b.y0 / img.h * 100}%;width:${(b.x1 - b.x0) / img.w * 100}%;height:${(b.y1 - b.y0) / img.h * 100}%"></div>`;
+      const st = r.xv.fields[k].status, cl = st === "Matched" ? "good" : st === "Mismatched" ? "bad" : "warn", b = { x0: l.bbox.x0 - 8, y0: l.bbox.y0 - 8, x1: l.bbox.x1 + 8, y1: l.bbox.y1 + 8 };
+      return `<div class="box ${cl}" title="${esc(Scoring.LABEL[k])}: ${esc(r.xv.fields[k].status)}" style="left:${b.x0 / img.w * 100}%;top:${b.y0 / img.h * 100}%;width:${(b.x1 - b.x0) / img.w * 100}%;height:${(b.y1 - b.y0) / img.h * 100}%"></div>`;
     }).join("");
     const max = Math.max(1, ...r.factors.map(f => f.points));
     return layout(`<h1>Verify Certificate</h1>${steps(4)}<div class="resultHero ${esc(cls.toLowerCase())}"><div><div class="eyebrow" style="color:white">VERIFICATION OUTCOME${r.finalClass ? " (ADMINISTRATOR DECISION)" : ""}</div><h1>${esc(cls)}</h1><div>${esc(r.fields.number)} · ${esc(r.fields.name)}</div></div><div class="risk">${esc(r.score)}<small style="font-size:9px">RISK / 100</small></div></div>
@@ -142,7 +145,7 @@
     <div class="grid2"><div class="panel"><div class="eyebrow">CROSS-VALIDATION</div><h2>Field-by-field evidence</h2><table class="table"><tr><th>Field</th><th>Extracted</th><th>Institution record</th><th>Status</th></tr>${Object.keys(r.xv.fields).map(k => `<tr><td>${esc(Scoring.LABEL[k])}</td><td>${esc(r.fields[k] || "Not available")}</td><td>${esc(r.xv.fields[k].expected)}</td><td class="st-${esc(r.xv.fields[k].status.replace(" ", ""))}">${esc(r.xv.fields[k].status)}</td></tr>`).join("")}</table>
     <h3>Why this result?</h3><p>${esc(r.explanation)}</p>${r.factors.map(f => `<div class="bar"><div>${esc(f.text)}<i style="width:${f.points / max * 100}%;margin-top:4px;${f.points ? "" : "background:#9aa7bb"}"></i></div><b>+${esc(f.points)}</b></div>`).join("")}
     <div class="actions"><button class="primary" data-act="print">▧ Print / Save Report</button>${Auth.can("override") && cls !== "Genuine" && !r.finalClass ? `<button class="secondary" data-act="go" data-v="override">Administrator Override</button>` : ""}<button class="secondary" data-act="reset">Verify Another</button></div></div>
-    <div class="panel"><div class="eyebrow">EXPLAINABLE EVIDENCE</div><h2>Where the evidence is</h2><p class="sub">Red = field that failed record validation; green = field that matched. Boxes are the OCR word-line positions on your document.</p><div class="ovl"><img src="${esc(img.url)}" alt="Certificate with evidence boxes">${boxes}</div>
+    <div class="panel"><div class="eyebrow">EXPLAINABLE EVIDENCE</div><h2>Where the evidence is</h2><p class="sub">Green = matches the record; red = differs from the record; amber = could not be compared (no record, or value missing). Boxes mark where OCR read each value, they are <b>not</b> proof of tampering.</p><div class="ovl"><img src="${esc(img.url)}" alt="Certificate with evidence boxes">${boxes}</div>
     ${r.tamper.available ? `<div class="toggle"><label><input type="checkbox" data-act="ela" ${S.showEla ? "checked" : ""}>Show experimental ELA heat-map (advisory only)</label></div>${S.showEla ? `<div class="ovl"><img src="${esc(r.heatUrl)}" alt="Error level analysis heat-map"></div><p class="sub">ELA found ${esc(r.tamper.anomalyBlocks)} clustered anomalous block(s) of ${esc(r.tamper.contentBlocks)} content blocks. This heuristic is not a trained model and has low weight in the score.</p>` : ""}` : `<p class="sub">Integrity (ELA) analysis is not applied to PDF files.</p>`}
     <hr><h3>Verification reference</h3><b class="mono">${esc(r.id)}</b><p class="sub mono">File: ${esc(r.file)}<br>SHA-256: ${esc(r.hash)}<br>OCR ${esc(r.ocrMs)} ms · ELA ${esc(r.elaMs)} ms · total ${esc(r.totalMs)} ms<br>Checked: ${esc(new Date(r.ts).toLocaleString())} by ${esc(r.user)}</p></div></div>`, "verify");
   }
@@ -188,13 +191,34 @@
     S.info = { name: file.name, size: file.size, hash: hexOf(await crypto.subtle.digest("SHA-256", await file.arrayBuffer())) };
     render();
   }
+  // Field-level evidence: which OCR line each value came from, how confident OCR was, and whether it needs a manual check.
+  function evidence(o) {
+    const ev = {};
+    for (const k of ["name", "number", "qualification", "institution", "date"]) {
+      const v = o.fields[k]; if (!v) { ev[k] = null; continue; }
+      const line = k === "date" ? null : OCR.locate(o.lines, v);
+      const why = [];
+      if (k !== "date" && !line) why.push("could not be matched to a single line of OCR text");
+      if (line && line.conf < 70) why.push("low OCR confidence (" + line.conf + "%)");
+      if (k === "date" && o.meta.dateUncertain) why.push("no 'issued / awarded' label found beside this date");
+      if (k === "name" && !/\s/.test(v)) why.push("only one word found");
+      ev[k] = { text: line ? line.text : "", conf: line ? line.conf : null, why };
+    }
+    return ev;
+  }
   async function analyse() {
     if (!S.file) { S.errs.file = "Choose a JPG, PNG or PDF first."; render(); return; }
     try {
       S.view = "ocring"; S.prog = 0; render(); S.t0 = performance.now();
       OCR.onProgress(p => { S.prog = p; const b = document.querySelector(".progress>div"); if (b) { b.style.width = Math.round(p * 100) + "%"; b.parentElement.nextElementSibling.textContent = Math.round(p * 100) + "%"; } });
       S.prep = await prepare(S.file, S.kind); S.prep.url = URL.createObjectURL(S.prep.blob);
-      S.ocr = S.prep.pdf ? await OCR.extractMany(S.prep.blobs) : await OCR.extract(S.prep.blob);
+      if (S.prep.pdf) S.ocr = await OCR.extractMany(S.prep.blobs);
+      else {
+        // OCR runs on an enhanced copy (upscaled, grey, contrast-stretched); boxes are mapped back to the displayed image
+        const en = await OCR.enhance(S.prep.blob); S.ocr = await OCR.extract(en.blob);
+        S.ocr.lines = S.ocr.lines.map(l => ({ ...l, bbox: { x0: l.bbox.x0 / en.scale, y0: l.bbox.y0 / en.scale, x1: l.bbox.x1 / en.scale, y1: l.bbox.y1 / en.scale } }));
+      }
+      S.ev = evidence(S.ocr);
       S.fields = { ...S.ocr.fields }; S.orig = { ...S.ocr.fields }; S.corrected = []; S.errs = {}; S.docType = S.ocr.docType;
       S.view = "review"; render();
     } catch (e) {
@@ -206,6 +230,7 @@
     const f = {}; ["name", "number", "qualification", "institution", "date"].forEach(k => f[k] = ($("#f_" + k)?.value || "").trim());
     f.number = f.number.toUpperCase(); S.fields = f; S.errs = validateFields(f); S.docType = $("#docType")?.value || S.docType;
     S.corrected = Object.keys(f).filter(k => f[k] !== S.orig[k]);
+    if (S.docType === "academic" && uncertain().length && !$("#chk")?.checked) S.errs._chk = "Some fields are marked “check”. Confirm them against the document (or correct them) before verification.";
     if (Object.keys(S.errs).length) { render(); return; }
     if (S.docType !== "academic") return await finishUnsupported(f);
     try {

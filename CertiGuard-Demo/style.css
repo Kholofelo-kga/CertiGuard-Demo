@@ -39,3 +39,8 @@ input,textarea{width:100%;padding:13px;border:1px solid #cbd6e5;border-radius:9p
 textarea{resize:vertical}
 .resultHero.unsupported{background:linear-gradient(120deg,#46546b,#6b7a93)}.badge.unsupported{background:#e8ecf2;color:#46546b}
 select{width:100%;padding:13px;border:1px solid #cbd6e5;border-radius:9px;background:#fff;font:inherit}
+
+.ovl .box.warn{border-color:#d97706;background:#d9770622}
+.evid{font-size:12px;color:#51607a;margin:2px 0 4px}.evid.warn{color:#92400e}
+.chkrow{display:flex;gap:8px;align-items:flex-start;margin:12px 0;font-weight:600}.chkrow input{width:auto;margin-top:3px}
+.rawocr{margin-top:12px}.rawocr pre{white-space:pre-wrap;font-size:12px;background:#f3f5f9;padding:8px;border-radius:6px;max-height:200px;overflow:auto}

@@ -29,6 +29,7 @@ async function runFlow(p, sample, { shots } = {}) {
   if (shots) await p.screenshot({ path: path.join(SH, shots + "_1_upload.png") });
   await p.click("[data-act=analyse]"); await p.waitForSelector("#f_name", { timeout: 90000 });
   if (shots) await p.screenshot({ path: path.join(SH, shots + "_2_review.png") });
+  if (await p.$("#chk")) await p.check("#chk");
   await p.click("[data-act=confirm]"); await p.waitForSelector(".resultHero", { timeout: 60000 });
   if (shots) await p.screenshot({ path: path.join(SH, shots + "_3_result.png"), fullPage: true });
   const cls = (await p.textContent(".resultHero h1")).trim().replace("Unsupported document", "Unsupported"); const rk = await p.$(".risk"); const score = rk ? +(await rk.textContent()).replace(/\D.*$/, "") : 0;
@@ -154,7 +155,14 @@ const b64 = f => fs.readFileSync(path.join(ROOT, f)).toString("base64");
   });
   await tc("TC-19", "Document types", "Diploma that shows no certificate number", "Number left as Not available (nothing invented); result Suspicious because it cannot be confirmed; no format error", async () => {
     const r = await runFlow(p, S6, { shots: "s10_nonumber" }); const body = await p.textContent("body");
-    return { ok: r.cls === "Suspicious" && /No certificate number on the document/.test(body) && /Not available/.test(body), actual: `${r.cls}, risk ${r.score}/100; "No certificate number on the document" factor shown` };
+    return { ok: r.cls === "Suspicious" && /not found or not reliably identified/.test(body) && /Not available/.test(body), actual: `${r.cls}, risk ${r.score}/100; "number not found or not reliably identified" factor shown` };
+  });
+  await tc("TC-21", "Extraction", "Hard scan: wrapped qualification, ALL-CAPS name, birth date, other IDs, low resolution", "Name, qualification, institution read in full; issue date is the 13 Dec 2024 date (not the birth date); IDs not used as certificate number", async () => {
+    await open(p, "Verify Certificate"); await p.setInputFiles("#file", path.join(ROOT, "tests/eval/hard_tut_style.jpg")); await p.waitForSelector(".hash"); await p.click("[data-act=analyse]"); await p.waitForSelector("#f_name", { timeout: 120000 });
+    const v = {}; for (const k of ["name", "number", "qualification", "institution", "date"]) v[k] = await p.inputValue("#f_" + k);
+    await p.screenshot({ path: path.join(SH, "s11_hard_review.png"), fullPage: true });
+    const ok = /thabo mokgosi/i.test(v.name) && /advanced diploma/i.test(v.qualification) && /computer science/i.test(v.qualification) && /tshwane university of technology/i.test(v.institution) && v.date === "2024-12-13" && !/219745761|2000/.test(v.number);
+    return { ok, actual: JSON.stringify(v) + "; raw OCR text panel present=" + !!(await p.$(".rawocr")) };
   });
   await tc("TC-20", "Document types", "Three-page PDF where the certificate is on page 2", "All pages read; name and institution taken from the document, not from sample data", async () => {
     await open(p, "Verify Certificate"); await p.setInputFiles("#file", path.join(ROOT, "tests/eval/multipage_pack.pdf")); await p.waitForSelector(".hash"); await p.click("[data-act=analyse]"); await p.waitForSelector("#f_name", { timeout: 120000 });

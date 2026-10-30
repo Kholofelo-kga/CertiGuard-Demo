@@ -1,5 +1,5 @@
 {
- "when": "2026-10-30T21:58:20.974Z",
+ "when": "2026-10-30T22:18:00.575Z",
  "base": "http://localhost:8765",
  "tests": [
   {
@@ -151,7 +151,15 @@
    "area": "Document types",
    "name": "Diploma that shows no certificate number",
    "expected": "Number left as Not available (nothing invented); result Suspicious because it cannot be confirmed; no format error",
-   "actual": "Suspicious, risk 45/100; \"No certificate number on the document\" factor shown",
+   "actual": "Suspicious, risk 45/100; \"number not found or not reliably identified\" factor shown",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-21",
+   "area": "Extraction",
+   "name": "Hard scan: wrapped qualification, ALL-CAPS name, birth date, other IDs, low resolution",
+   "expected": "Name, qualification, institution read in full; issue date is the 13 Dec 2024 date (not the birth date); IDs not used as certificate number",
+   "actual": "{\"name\":\"Thabo Mokgosi\",\"number\":\"AD12223\",\"qualification\":\"ADVANCED DIPLOMA in Computer Science\",\"institution\":\"Tshwane University of Technology\",\"date\":\"2024-12-13\"}; raw OCR text panel present=true",
    "status": "Pass"
   },
   {
@@ -167,23 +175,23 @@
  "quant": {
   "latency": {
    "n": 10,
-   "coldTotalMs": 4092,
+   "coldTotalMs": 5600,
    "warmTotalMs": [
-    2971,
-    3015,
-    2985,
-    3025,
-    3529,
-    3014,
-    3006,
-    3005,
-    3009
+    4555,
+    4574,
+    5057,
+    4544,
+    4569,
+    4579,
+    4569,
+    4555,
+    4573
    ],
-   "warmMedianMs": 3009,
-   "warmP95Ms": 3529,
-   "warmMaxMs": 3529,
-   "warmOcrMedianMs": 687,
-   "warmElaMedianMs": 1087,
+   "warmMedianMs": 4569,
+   "warmP95Ms": 5057,
+   "warmMaxMs": 5057,
+   "warmOcrMedianMs": 1080,
+   "warmElaMedianMs": 1075,
    "under10sPct": 100
   },
   "taskCompletion": {

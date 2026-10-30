@@ -1,6 +1,8 @@
 /* CertiGuard v2 - OCR service (emerging-technology component 1).
    Tesseract.js 5 (LSTM neural-network OCR compiled to WebAssembly) runs fully in the browser;
-   the certificate never leaves the user's device. */
+   the certificate never leaves the user's device.
+   Field extraction is rule-based: a value is filled in only when the document text supports it,
+   otherwise the field stays empty ("Not available") and is never guessed. */
 (function (G) {
   "use strict";
   let worker = null, onProg = () => { };
@@ -8,22 +10,21 @@
   const pad = n => String(n).padStart(2, "0");
   const title = s => s.toLowerCase().replace(/\b([a-z])/g, m => m.toUpperCase()).replace(/\b(Of|The|And|In)\b/g, m => m.toLowerCase());
   const clean = s => s.replace(/[|_~=]+/g, " ").replace(/\s+/g, " ").trim();
+  const allCaps = s => s === s.toUpperCase() && /[A-Z]/.test(s);
+  const norm = s => allCaps(s) ? title(s) : s;
+  const letters = s => s.replace(/[^A-Za-z'&\-() ]/g, "").replace(/^(?:[A-Za-z]\s+)+/, "");
 
   async function getWorker() {
     if (worker) return worker;
     worker = await Tesseract.createWorker("eng", 1, {
-      workerPath: "vendor/tess/worker.min.js",
-      corePath: "vendor/tess/core",
-      langPath: "vendor/tess/lang",
-      workerBlobURL: false,
+      workerPath: "vendor/tess/worker.min.js", corePath: "vendor/tess/core", langPath: "vendor/tess/lang", workerBlobURL: false,
       logger: m => { if (m.status === "recognizing text") onProg(m.progress); }
     });
     return worker;
   }
-
   function validIso(y, m, d) {
     const dt = new Date(Date.UTC(y, m - 1, d));
-    return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d && y >= 1950 && y <= 2100;
+    return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d && y >= 1930 && y <= 2100;
   }
   function parseDate(t) {
     let m = t.match(/\b(19|20)\d{2}[-\/.](0?[1-9]|1[0-2])[-\/.](0?[1-9]|[12]\d|3[01])\b/);
@@ -34,21 +35,18 @@
     if (m) { const mo = MONTHS[m[1].slice(0, 3).toLowerCase()], d = +m[2], y = +m[3]; if (validIso(y, mo, d)) return y + "-" + pad(mo) + "-" + pad(d); }
     return "";
   }
-  // Certificate number: formats differ between institutions, so a labelled value is preferred
-  // ("Certificate No: X", "Reference: X", "Serial: X"); the PREFIX-YEAR-NUMBER pattern is only a fallback.
-  // Returns "" when the document shows no certificate number (the field is then "Not available").
+  // Certificate number: only a LABELLED value ("Certificate No", "Serial", "Ref") or the PREFIX-YEAR-NUMBER pattern.
+  // Other numbers on the page are returned as unassigned identifier candidates, never guessed.
   function parseNumber(t) {
-    const lab = t.match(/\b(?:certificate|cert\.?|reference|ref\.?|serial|diploma|document|award)\s*(?:no\.?|number|nr\.?|#)\s*[:\-]?\s*([A-Z0-9][A-Z0-9\-\/\.]{3,29})/i);
+    const lab = t.match(/\b(?:(?:certificate|cert\.?|diploma|document|award)\s*(?:no\.?|number|nr\.?|#)|(?:reference|ref\.?|serial)\s*(?:no\.?|number|nr\.?|#)?)\s*[:\-]?\s*([A-Z0-9][A-Z0-9\-\/\.]{3,29})/i);
     if (lab) return lab[1].toUpperCase().replace(/[.\-\/]+$/, "");
     const m = t.match(/\b([A-Z]{2,5})\s?[-–—]\s?((?:19|20)\d{2})\s?[-–—]\s?(\d{4,5})\b/);
     return m ? m[1] + "-" + m[2] + "-" + m[3] : "";
   }
-  // Document type from the visible text: academic qualification, conference participation,
-  // professional certification, or unsupported. CertiGuard verifies academic qualifications only.
   const TYPES = { academic: "Academic qualification", conference: "Conference / event participation", professional: "Professional certification", unsupported: "Unsupported document" };
   function detectType(t) {
     const academic = (t.match(/\b(diploma|bachelor|b\.?sc|b\.?com|honours|master|doctor|degree|higher certificate|national certificate|advanced certificate)\b/gi) || []).length;
-    const body = /\b(university|college|institute|academy|school of)\b/i.test(t);
+    const body = /\b(university|college|institute|academy|polytechnic|school of)\b/i.test(t);
     const conf = (t.match(/\b(conference|symposium|workshop|proceedings|participation|participated|attendance|attended|presenter|presented|keynote|summit|seminar|webinar|presentation|program chair|organi[sz]ing|poster|paper|certificate of appreciation)\b/gi) || []).length;
     const prof = (t.match(/\b(certified|certification|credential|exam|microsoft|aws|cisco|comptia|pmi|oracle|issued by)\b/gi) || []).length;
     if (academic >= 1 && body && academic >= conf) return "academic";
@@ -56,42 +54,97 @@
     if (prof >= 1 && !academic) return "professional";
     return academic >= 1 ? "academic" : "unsupported";
   }
-  // Field parser: heuristics over the OCR lines (labels such as "certify that" / "awarded the").
-  function parseFields(text) {
+  const plausibleName = s => { const t = s.trim().split(/\s+/); return t.length >= 2 && t.length <= 6 && t.every(w => /^[A-Za-z'\-]{2,}$/.test(w)) && /[aeiouAEIOU]/.test(s); };
+  const goodLine = s => s && s.length >= 3 && (s.replace(/[^A-Za-z]/g, "").length / s.length) > 0.6;
+  // Joins a continuation line ("in Computer Science", "of Technology") to a title that wraps over two lines.
+  function joinCont(lines, i, text, re) {
+    let q = text;
+    for (let k = 1; k <= 2; k++) {
+      const n = lines[i + k];
+      if (n && n.length < 60 && re.test(q + "|" + n) && !/(this is|awarded|date|certify|conferred|number|birth)/i.test(n) && goodLine(n) && /^(in|of|and|specialising|majoring)\b/i.test(n)) q = q + " " + n; else break;
+    }
+    return q;
+  }
+  // Returns the extracted fields plus metadata about how reliable they are.
+  function analyse(text) {
     const lines = text.split(/\r?\n/).map(clean).filter(l => l.length > 2);
     const f = { name: "", number: parseNumber(text), qualification: "", institution: "", date: "" };
-    const dl = lines.find(l => /(issue|issued|awarded|conferred|date)/i.test(l) && !/(birth|born|dob)/i.test(l) && parseDate(l));
-    f.date = dl ? parseDate(dl) : parseDate(lines.filter(l => !/(birth|born|dob)/i.test(l)).join("\n"));
-    // issuing organisation: first matching line near the top of the document (not a footer line)
-    const inst = lines.slice(0, Math.max(6, Math.ceil(lines.length * 0.5))).find(l => /\b(university|college|institute|academy)\b/i.test(l) && !/^this is to certify/i.test(l));
-    if (inst) f.institution = title(inst.replace(/[^A-Za-z&'\- ]/g, "").trim());
+    const meta = { dateUncertain: false, identifiers: [], dateCandidates: [] };
+    // ---- dates: separate labelled issue dates from birth dates and other dates ----
+    const dated = lines.map(l => ({ l, d: parseDate(l) })).filter(x => x.d);
+    const birth = x => /(birth|born|dob)/i.test(x.l);
+    const issue = dated.find(x => /(issue|issued|awarded|conferred|graduat|date of)/i.test(x.l) && !birth(x));
+    const others = dated.filter(x => !birth(x));
+    meta.dateCandidates = dated.map(x => x.d);
+    if (issue) f.date = issue.d;
+    else if (others.length === 1) { f.date = others[0].d; meta.dateUncertain = true; }
+    else if (others.length > 1) { f.date = others.map(x => x.d).sort().pop(); meta.dateUncertain = true; }  // latest non-birth date, flagged for review
+    // ---- institution (top half of the page, joined across wrapped lines) ----
+    const top = Math.max(6, Math.ceil(lines.length * 0.5));
+    const ii = lines.slice(0, top).findIndex(l => /\b(university|college|institute|academy|polytechnic)\b/i.test(l) && !/^this is to certify/i.test(l));
+    if (ii >= 0) f.institution = norm(clean(letters(joinCont(lines, ii, lines[ii], /university|college|institute/i)))); 
+    // ---- name and qualification from the wording around them ----
     for (let i = 0; i < lines.length; i++) {
-      if (/(certify that|awarded to|presented to|conferred (up)?on)/i.test(lines[i]) && !f.name) {
-        const same = lines[i].replace(/.*?(certify that|awarded to|presented to|conferred (up)?on)/i, "").trim();
-        f.name = clean((same.length > 3 ? same : lines[i + 1] || "").replace(/[^A-Za-z'\- ]/g, ""));
+      if (!f.name && /(certify that|awarded to|presented to|conferred (up)?on|this certificate is awarded)/i.test(lines[i])) {
+        const same = lines[i].replace(/.*?(certify that|awarded to|presented to|conferred (up)?on|this certificate is awarded)/i, "").trim();
+        for (const c of [same, lines[i + 1], lines[i + 2]]) { const cand = clean(letters(c || "")); if (plausibleName(cand)) { f.name = norm(cand); break; } }
       }
-      if (/(has been awarded|has completed the requirements for|awarded the)/i.test(lines[i]) && !f.qualification) {
-        const same = lines[i].replace(/.*?(has been awarded( the)?|has completed the requirements for( the)?|awarded the)/i, "").trim();
-        f.qualification = clean((same.length > 3 ? same : lines[i + 1] || "").replace(/[^A-Za-z&'\-() ]/g, ""));
+      if (!f.qualification && /(has been awarded|has completed the requirements for|awarded the|qualification)/i.test(lines[i])) {
+        const same = lines[i].replace(/.*?(has been awarded( the)?|has completed the requirements for( the)?|awarded the|qualification:?)/i, "").trim();
+        const start = goodLine(same) ? same : lines[i + 1], at = goodLine(same) ? i : i + 1;
+        if (goodLine(start)) f.qualification = norm(clean(letters(joinCont(lines, at, start, /diploma|degree|bachelor|certificate|honours|master/i))));
       }
     }
-    if (!f.qualification) { const q = lines.find(l => /\b(diploma|bachelor|bsc|bcom|honours|master|degree|certificate in)\b/i.test(l)); if (q) f.qualification = clean(q.replace(/[^A-Za-z&'\-() ]/g, "")); }
-    return f;
+    if (!f.qualification) {
+      const qi = lines.findIndex(l => /\b(diploma|bachelor|bsc|bcom|honours|master|degree|certificate in)\b/i.test(l) && !/^this is/i.test(l));
+      if (qi >= 0) f.qualification = norm(clean(letters(joinCont(lines, qi, lines[qi], /diploma|degree|bachelor|certificate|honours|master/i))));
+    }
+    // ---- other identifiers: listed, not assigned ----
+    const ids = new Set(); const noDates = text.replace(/\b\d{4}[-\/.]\d{1,2}[-\/.]\d{1,2}\b/g, " ");
+    (noDates.match(/\b[A-Z]{1,4}\d{4,8}\b/g) || []).forEach(x => ids.add(x)); (noDates.match(/\b\d{8,13}\b/g) || []).forEach(x => ids.add(x));
+    ids.delete(f.number); meta.identifiers = [...ids].slice(0, 6);
+    return { fields: f, meta };
   }
+  const parseFields = text => analyse(text).fields;
 
   const OCR = {
     onProgress(fn) { onProg = fn || (() => { }); },
-    // input: canvas or image blob. Returns text, mean confidence (0-100), parsed fields, elapsed ms.
-    async extract(src) {
-      const t0 = performance.now();
-      const w = await getWorker();
-      const { data } = await w.recognize(src, {}, { text: true, blocks: true });
-      const fields = parseFields(data.text || "");
-      const lines = [];
-      (data.blocks || []).forEach(b => (b.paragraphs || []).forEach(p => (p.lines || []).forEach(l => lines.push({ text: clean(l.text || ""), bbox: l.bbox }))));
-      return { text: data.text || "", confidence: Math.round(data.confidence || 0), fields, lines, docType: detectType(data.text || ""), ms: Math.round(performance.now() - t0) };
+    // image preparation: upscale small scans and stretch contrast, which helps small or faint text
+    async enhance(blob) {
+      const bmp = await createImageBitmap(blob); const s = Math.min(3, Math.max(1, 2400 / bmp.width));
+      const c = document.createElement("canvas"); c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+      const x = c.getContext("2d", { willReadFrequently: true }); x.imageSmoothingQuality = "high"; x.drawImage(bmp, 0, 0, c.width, c.height);
+      const im = x.getImageData(0, 0, c.width, c.height), d = im.data, hist = new Uint32Array(256);
+      for (let i = 0; i < d.length; i += 4) { const g = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) | 0; d[i] = d[i + 1] = d[i + 2] = g; hist[g]++; }
+      const tot = d.length / 4; let acc = 0, lo = 0, hi = 255; for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc > tot * 0.01) { lo = v; break; } }
+      acc = 0; for (let v = 255; v >= 0; v--) { acc += hist[v]; if (acc > tot * 0.01) { hi = v; break; } }
+      const rng = Math.max(40, hi - lo); for (let i = 0; i < d.length; i += 4) { const g = Math.max(0, Math.min(255, ((d[i] - lo) * 255) / rng)); d[i] = d[i + 1] = d[i + 2] = g; }
+      x.putImageData(im, 0, 0);
+      return { blob: await new Promise(r => c.toBlob(r, "image/png")), scale: c.width / bmp.width };
     },
-    // Finds the OCR line that contains a field value, so the interface can highlight the evidence on the document.
+    // input: image blob. Returns text, mean confidence (0-100), parsed fields + reliability metadata, line boxes (own pixel space).
+    async extract(src, opts) {
+      const t0 = performance.now(); const w = await getWorker();
+      const run = async () => { const { data } = await w.recognize(src, {}, { text: true, blocks: true }); const lines = [];
+        (data.blocks || []).forEach(b => (b.paragraphs || []).forEach(p => (p.lines || []).forEach(l => lines.push({ text: clean(l.text || ""), bbox: l.bbox, conf: Math.round(l.confidence || 0) }))));
+        return { text: data.text || "", conf: Math.round(data.confidence || 0), lines }; };
+      let r = await run(), a = analyse(r.text);
+      // second pass in sparse-text mode when a key field is missing (finds text scattered across the page)
+      if (!(opts && opts.single) && (!a.fields.name || !a.fields.institution || !a.fields.qualification)) {
+        try { await w.setParameters({ tessedit_pageseg_mode: "11" }); const r2 = await run(); await w.setParameters({ tessedit_pageseg_mode: "3" });
+          const merged = r.text + "\n" + r2.text, a2 = analyse(merged);
+          for (const k of ["name", "institution", "qualification"]) if (!a.fields[k] && a2.fields[k]) a.fields[k] = a2.fields[k];
+          r.text = merged; r.lines = r.lines.concat(r2.lines.filter(l2 => !r.lines.some(l1 => l1.text === l2.text)));
+        } catch (e) { /* second pass is optional */ }
+      }
+      return { text: r.text, confidence: r.conf, fields: a.fields, meta: a.meta, lines: r.lines, docType: detectType(r.text), ms: Math.round(performance.now() - t0) };
+    },
+    async extractMany(blobs) {
+      const t0 = performance.now(); const parts = []; let conf = 0;
+      for (let i = 0; i < blobs.length; i++) { onProg(0); parts.push(await OCR.extract(blobs[i], { single: true })); conf += parts[i].confidence; }
+      const text = parts.map(p => p.text).join("\n"), a = analyse(text);
+      return { text, confidence: Math.round(conf / parts.length), fields: a.fields, meta: a.meta, lines: parts[0].lines, pages: parts.length, docType: detectType(text), ms: Math.round(performance.now() - t0) };
+    },
     locate(lines, value) {
       const v = String(value || "").toLowerCase().replace(/[^a-z0-9]/g, ""); if (!v) return null;
       let best = null, bs = 0;
@@ -103,14 +156,7 @@
       }
       return bs >= 0.5 ? best : null;
     },
-    // OCR for several images (pages of a PDF): text is merged for field parsing, line boxes come from page 1.
-    async extractMany(blobs) {
-      const t0 = performance.now(); const parts = []; let conf = 0;
-      for (let i = 0; i < blobs.length; i++) { onProg(0); parts.push(await OCR.extract(blobs[i])); conf += parts[i].confidence; }
-      const text = parts.map(p => p.text).join("\n");
-      return { text, confidence: Math.round(conf / parts.length), fields: parseFields(text), lines: parts[0].lines, pages: parts.length, docType: detectType(text), ms: Math.round(performance.now() - t0) };
-    },
-    TYPES, detectType, parseFields, parseDate, parseNumber
+    TYPES, detectType, analyse, parseFields, parseDate, parseNumber
   };
   G.CG.OCR = OCR;
 })(window);
