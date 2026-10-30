@@ -1,0 +1,332 @@
+[
+ {
+  "file": "tests/eval/degraded/blur_01.jpg",
+  "kind": "blur",
+  "fields": {
+   "name": "Lerato Mokoena",
+   "number": "TUT-2026-10482",
+   "qualification": "Diploma in Information Technology",
+   "institution": "Tshwane University of Technology",
+   "date": "2026-05-15"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/lowres_01.jpg",
+  "kind": "lowres",
+  "fields": {
+   "name": "Lerato Mokoena",
+   "number": "TUT-2026-10482",
+   "qualification": "Diploma in Information Technology",
+   "institution": "Tshwane University of Technology",
+   "date": "2026-05-15"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/skew_01.jpg",
+  "kind": "skew",
+  "fields": {
+   "name": "Lerato Mokoena",
+   "number": "TUT-2026-10482",
+   "qualification": "Diploma in Information Technology",
+   "institution": "Tshwane University of Technology",
+   "date": "2026-05-15"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/blur_02.jpg",
+  "kind": "blur",
+  "fields": {
+   "name": "Thando Ndlovu",
+   "number": "UL-2025-77821",
+   "qualification": "Bachelor of Information Science",
+   "institution": "University of Limpopo",
+   "date": "2025-12-10"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/lowres_02.jpg",
+  "kind": "lowres",
+  "fields": {
+   "name": "Thando Ndlovu",
+   "number": "UL-2025-77821",
+   "qualification": "Bachelor of Information Science",
+   "institution": "University of Limpopo",
+   "date": "2025-12-10"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/skew_02.jpg",
+  "kind": "skew",
+  "fields": {
+   "name": "Thando Ndlovu",
+   "number": "UL-2025-77821",
+   "qualification": "Bachelor of Information Science",
+   "institution": "University of Limpopo",
+   "date": "2025-12-10"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/blur_03.jpg",
+  "kind": "blur",
+  "fields": {
+   "name": "Sipho Dlamini",
+   "number": "UJ-2024-33105",
+   "qualification": "BSc Computer Science",
+   "institution": "University of Johannesburg",
+   "date": "2024-12-12"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/lowres_03.jpg",
+  "kind": "lowres",
+  "fields": {
+   "name": "Sipho Dlamini",
+   "number": "UJ-2024-33105",
+   "qualification": "BSc Computer Science",
+   "institution": "University of Johannesburg",
+   "date": "2024-12-12"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/skew_03.jpg",
+  "kind": "skew",
+  "fields": {
+   "name": "Sipho Dlamini",
+   "number": "UJ-2024-33105",
+   "qualification": "BSc Computer Science",
+   "institution": "University of Johannesburg",
+   "date": "2024-12-12"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/blur_04.jpg",
+  "kind": "blur",
+  "fields": {
+   "name": "Naledi Khumalo",
+   "number": "WITS-2023-55012",
+   "qualification": "BCom Accounting",
+   "institution": "University of the Witwatersrand",
+   "date": "2023-12-08"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/lowres_04.jpg",
+  "kind": "lowres",
+  "fields": {
+   "name": "Naledi Khumalo",
+   "number": "WITS-2023-55012",
+   "qualification": "BCom Accounting",
+   "institution": "University of the Witwatersrand",
+   "date": "2023-12-08"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/skew_04.jpg",
+  "kind": "skew",
+  "fields": {
+   "name": "Naledi Khumalo",
+   "number": "WITS-2023-55012",
+   "qualification": "BCom Accounting",
+   "institution": "University of the Witwatersrand",
+   "date": "2023-12-08"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/blur_05.jpg",
+  "kind": "blur",
+  "fields": {
+   "name": "Pieter van Wyk",
+   "number": "UP-2025-90417",
+   "qualification": "Bachelor of Engineering Electrical",
+   "institution": "University of Pretoria",
+   "date": "2025-12-11"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/lowres_05.jpg",
+  "kind": "lowres",
+  "fields": {
+   "name": "Pieter van Wyk",
+   "number": "UP-2025-90417",
+   "qualification": "Bachelor of Engineering Electrical",
+   "institution": "University of Pretoria",
+   "date": "2025-12-11"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/skew_05.jpg",
+  "kind": "skew",
+  "fields": {
+   "name": "Pieter van Wyk",
+   "number": "UP-2025-90417",
+   "qualification": "Bachelor of Engineering Electrical",
+   "institution": "University of Pretoria",
+   "date": "2025-12-11"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/blur_06.jpg",
+  "kind": "blur",
+  "fields": {
+   "name": "Zanele Mahlangu",
+   "number": "KTI-2025-20931",
+   "qualification": "Diploma in Business Management",
+   "institution": "Karoo Technical Institute",
+   "date": "2025-07-18"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/lowres_06.jpg",
+  "kind": "lowres",
+  "fields": {
+   "name": "Zanele Mahlangu",
+   "number": "KTI-2025-20931",
+   "qualification": "Diploma in Business Management",
+   "institution": "Karoo Technical Institute",
+   "date": "2025-07-18"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/skew_06.jpg",
+  "kind": "skew",
+  "fields": {
+   "name": "Zanele Mahlangu",
+   "number": "KTI-2025-20931",
+   "qualification": "Diploma in Business Management",
+   "institution": "Karoo Technical Institute",
+   "date": "2025-07-18"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/blur_07.jpg",
+  "kind": "blur",
+  "fields": {
+   "name": "Kagiso Sithole",
+   "number": "MCU-2024-41277",
+   "qualification": "BA Communication Studies",
+   "institution": "Marula Coastal University",
+   "date": "2024-04-26"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/lowres_07.jpg",
+  "kind": "lowres",
+  "fields": {
+   "name": "Kagiso Sithole",
+   "number": "MCU-2024-41277",
+   "qualification": "BA Communication Studies",
+   "institution": "Marula Coastal University",
+   "date": "2024-04-26"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/skew_07.jpg",
+  "kind": "skew",
+  "fields": {
+   "name": "Kagiso Sithole",
+   "number": "MCU-2024-41277",
+   "qualification": "BA Communication Studies",
+   "institution": "Marula Coastal University",
+   "date": "2024-04-26"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/blur_08.jpg",
+  "kind": "blur",
+  "fields": {
+   "name": "Ayanda Zulu",
+   "number": "NLC-2026-60418",
+   "qualification": "Higher Certificate in Accounting",
+   "institution": "Northern Lights College",
+   "date": "2026-02-13"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/lowres_08.jpg",
+  "kind": "lowres",
+  "fields": {
+   "name": "Ayanda Zulu",
+   "number": "NLC-2026-60418",
+   "qualification": "Higher Certificate in Accounting",
+   "institution": "Northern Lights College",
+   "date": "2026-02-13"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/skew_08.jpg",
+  "kind": "skew",
+  "fields": {
+   "name": "Ayanda Zulu",
+   "number": "NLC-2026-60418",
+   "qualification": "Higher Certificate in Accounting",
+   "institution": "Northern Lights College",
+   "date": "2026-02-13"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/blur_09.jpg",
+  "kind": "blur",
+  "fields": {
+   "name": "Johan Botha",
+   "number": "DVU-2023-18862",
+   "qualification": "Bachelor of Education",
+   "institution": "Drakensberg Valley University",
+   "date": "2023-11-30"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/lowres_09.jpg",
+  "kind": "lowres",
+  "fields": {
+   "name": "Johan Botha",
+   "number": "DVU-2023-18862",
+   "qualification": "Bachelor of Education",
+   "institution": "Drakensberg Valley University",
+   "date": "2023-11-30"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/skew_09.jpg",
+  "kind": "skew",
+  "fields": {
+   "name": "Johan Botha",
+   "number": "DVU-2023-18862",
+   "qualification": "Bachelor of Education",
+   "institution": "Drakensberg Valley University",
+   "date": "2023-11-30"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/blur_10.jpg",
+  "kind": "blur",
+  "fields": {
+   "name": "Fatima Patel",
+   "number": "SRI-2025-73350",
+   "qualification": "Diploma in Civil Engineering",
+   "institution": "Southern Ridge Institute",
+   "date": "2025-09-05"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/lowres_10.jpg",
+  "kind": "lowres",
+  "fields": {
+   "name": "Fatima Patel",
+   "number": "SRI-2025-73350",
+   "qualification": "Diploma in Civil Engineering",
+   "institution": "Southern Ridge Institute",
+   "date": "2025-09-05"
+  }
+ },
+ {
+  "file": "tests/eval/degraded/skew_10.jpg",
+  "kind": "skew",
+  "fields": {
+   "name": "Fatima Patel",
+   "number": "SRI-2025-73350",
+   "qualification": "Diploma in Civil Engineering",
+   "institution": "Southern Ridge Institute",
+   "date": "2025-09-05"
+  }
+ }
+]

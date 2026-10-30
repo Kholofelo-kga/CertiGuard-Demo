@@ -3,11 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>CertiGuard | Academic Certificate Verification</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="app"></div>
+<div id="app" aria-live="polite"></div>
+<script src="vendor/tess/tesseract.min.js"></script>
+<script src="vendor/pdf/pdf.min.js"></script>
+<script src="store.js"></script>
+<script src="auth.js"></script>
+<script src="ocr.js"></script>
+<script src="ela.js"></script>
+<script src="scoring.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -1,21 +1,28 @@
-# CertiGuard Demo — Updated Screenshot Build
+# CertiGuard v2: functional prototype (ISJ107V Assignment 4)
 
-A static academic certificate-verification prototype designed for clear assignment screenshots.
+Browser-based academic certificate verification prototype. Fictional data only.
 
-## Screens included
-- Login
-- Verification Dashboard
-- Upload Certificate
-- Extract & Review
-- Verification Result + risk score + evidence + illustrative XAI view
-- Administrator Review / Override
-- Audit Trail
-- Institution Records
-- System Information
+## What is real
+- OCR: Tesseract.js 5 (LSTM neural network, WebAssembly) in a Web Worker; PDF page 1 rendered with pdf.js
+- Field parsing and validation, per-field cross-validation against institution records
+- Transparent additive fraud-risk score and explanation; evidence boxes from OCR line positions
+- Login (PBKDF2-SHA256 hashes), roles, lock-out, hash-chained audit trail, CSP, escaped output
+- Persistence in localStorage (users, records, requests, audit)
 
-## Important academic transparency
-The browser computes file metadata, timestamps and SHA-256 fingerprints live.
-OCR, CV/integrity, risk scoring, institutional matching and XAI outputs are deterministic demonstration outputs for the interface and must not be reported as measured experimental model results.
+## What is simplified or not built
+- Client-side login and storage (no server); ELA heat-map is display-only (weight 0, AUC 0.16 in evaluation)
+- No trained ResNet-50 tamper model and no Grad-CAM/SHAP (future work)
+
+## Accounts
+- administrator@certiguard.demo / CertiGuard#2026
+- officer@certiguard.demo / Officer#2026
+
+## Run locally
+`python3 -m http.server 8080` then open http://localhost:8080
 
 ## Deploy
-Upload `index.html`, `style.css`, `app.js`, `README.md`, and `vercel.json` to the ROOT of the GitHub repository and deploy/redeploy on Vercel.
+Upload the whole folder to the ROOT of the GitHub repository; Vercel serves it as a static site (vercel.json included).
+
+## Tests
+`npm i playwright && npx playwright install chromium` then `BASE_URL=http://localhost:8080 node tests/run-tests.js`
+Regenerate sample certificates: `python3 tests/gen_samples.py`

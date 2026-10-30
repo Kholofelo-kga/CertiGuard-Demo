@@ -1,0 +1,436 @@
+{
+ "when": "2026-10-30T20:03:18.520Z",
+ "base": "http://localhost:8765",
+ "tests": [
+  {
+   "id": "TC-01",
+   "area": "Security",
+   "name": "Login with valid administrator credentials",
+   "expected": "Dashboard opens; role shown as Administrator",
+   "actual": "Dashboard shown; badge: ● PROTOTYPE · ADMINISTRATOR",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-02",
+   "area": "Security",
+   "name": "Login with wrong password",
+   "expected": "Rejected with generic message; no session; failed attempt audited",
+   "actual": "\"Invalid email or password.\"; session=null; audit=\"Login failed\"",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-03",
+   "area": "Security",
+   "name": "Three failed logins lock the form",
+   "expected": "Lock message appears after the third failure; the valid password is also refused while locked",
+   "actual": "\"Too many failed attempts. Locked for 30 seconds.\" then valid password: \"Too many failed attempts. Try again in 30 s.\"",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-04",
+   "area": "Security",
+   "name": "Verification Officer tries to open the Audit Trail",
+   "expected": "Audit menu hidden; direct attempt denied and logged",
+   "actual": "menu hidden=true; message shown; audit=\"Access denied\"",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-05",
+   "area": "Validation",
+   "name": "Upload a text file renamed to .png",
+   "expected": "Rejected: content is not a real image",
+   "actual": "The file content is not a real JPG, PNG or PDF (the extension does not match its content).",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-06",
+   "area": "Validation",
+   "name": "Upload a file larger than 10 MB",
+   "expected": "Rejected with size message; OCR not started",
+   "actual": "File too large (10.5 MB). The limit is 10 MB.",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-07",
+   "area": "Security",
+   "name": "File name containing an HTML/script payload",
+   "expected": "Payload shown as plain text; no script executes",
+   "actual": "window.__xss=undefined; file name displayed literally",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-08",
+   "area": "Workflow + AI",
+   "name": "Genuine certificate end to end (JPG)",
+   "expected": "OCR reads 5/5 fields; all Matched; classification Genuine; request saved and audited",
+   "actual": "Genuine, risk 0/100, 5/5 fields Matched; audit=\"Completed verification\"",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-09",
+   "area": "Workflow + AI",
+   "name": "Certificate with altered student name",
+   "expected": "Name field Mismatched; classification not Genuine; evidence box on name",
+   "actual": "Suspicious, risk 30/100, 1 field(s) Mismatched, 1 red evidence box(es)",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-10",
+   "area": "Workflow + AI",
+   "name": "Certificate whose number is not in the institution records",
+   "expected": "All fields Not Found; classification Suspicious (cannot be confirmed)",
+   "actual": "Suspicious, risk 45/100, 5/5 fields Not Found",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-11",
+   "area": "Workflow + AI",
+   "name": "Genuine certificate supplied as PDF",
+   "expected": "PDF page rendered, OCR succeeds, classification Genuine, ELA marked not applicable",
+   "actual": "Genuine, risk 0/100; ELA not-applicable notice shown=true",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-12",
+   "area": "Validation",
+   "name": "Impossible issue date entered during review (2026-02-31)",
+   "expected": "Verification blocked; field-level error shown; stays on review screen",
+   "actual": "\"Use a real date in YYYY-MM-DD format.\"",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-13",
+   "area": "Workflow",
+   "name": "Correct an OCR field, then verify",
+   "expected": "Edited field flagged as edited and used in cross-validation",
+   "actual": "1 field Mismatched; row: Issue date2026-05-142026-05-15Mismatched",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-14",
+   "area": "Governance",
+   "name": "Administrator override with and without justification",
+   "expected": "Empty justification refused; valid one saved to audit with original and revised class",
+   "actual": "empty -> \"Enter a justification of at least 10 characters.\"; saved: Administrator override / Forged / \"Original: Suspicious; reason: Issue date contradic...\"",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-15",
+   "area": "Persistence",
+   "name": "Reload the page and check stored data",
+   "expected": "History, records and audit trail still present after reload",
+   "actual": "requests 5->5, audit entries 7->7",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-16",
+   "area": "Security",
+   "name": "Audit-chain tamper detection",
+   "expected": "Editing a stored audit entry is detected by 'Verify chain integrity'",
+   "actual": "before edit: \"✓ Audit chain intact: 7 entries verified.\" | after edit: \"✗ Audit chain BROKEN at entry 2 of 7: the stored history has...\"",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-17",
+   "area": "Data",
+   "name": "Add an institution record with a duplicate certificate number",
+   "expected": "Rejected with duplicate message; record count unchanged",
+   "actual": "\"A record with this certificate number already exists.\"; records 5->5",
+   "status": "Pass"
+  }
+ ],
+ "pageErrors": [],
+ "quant": {
+  "latency": {
+   "n": 10,
+   "coldTotalMs": 4670,
+   "warmTotalMs": [
+    3565,
+    3547,
+    3044,
+    3563,
+    3048,
+    3606,
+    3540,
+    3559,
+    3058
+   ],
+   "warmMedianMs": 3547,
+   "warmP95Ms": 3606,
+   "warmMaxMs": 3606,
+   "warmOcrMedianMs": 789,
+   "warmElaMedianMs": 1105,
+   "under10sPct": 100
+  },
+  "taskCompletion": {
+   "attempts": 10,
+   "completed": 10
+  },
+  "ocrClean": {
+   "images": 20,
+   "fieldsCorrect": 100,
+   "fieldsTotal": 100,
+   "accuracyPct": 100,
+   "meanConf": 95,
+   "perField": {
+    "name": 20,
+    "number": 20,
+    "qualification": 20,
+    "institution": 20,
+    "date": 20
+   },
+   "misses": []
+  },
+  "ocrDegraded": {
+   "blur": {
+    "images": 10,
+    "fieldsCorrect": 50,
+    "fieldsTotal": 50,
+    "accuracyPct": 100,
+    "meanConf": 94,
+    "perField": {
+     "name": 10,
+     "number": 10,
+     "qualification": 10,
+     "institution": 10,
+     "date": 10
+    },
+    "misses": []
+   },
+   "lowres": {
+    "images": 10,
+    "fieldsCorrect": 50,
+    "fieldsTotal": 50,
+    "accuracyPct": 100,
+    "meanConf": 94,
+    "perField": {
+     "name": 10,
+     "number": 10,
+     "qualification": 10,
+     "institution": 10,
+     "date": 10
+    },
+    "misses": []
+   },
+   "skew": {
+    "images": 10,
+    "fieldsCorrect": 48,
+    "fieldsTotal": 50,
+    "accuracyPct": 96,
+    "meanConf": 87,
+    "perField": {
+     "name": 10,
+     "number": 9,
+     "qualification": 10,
+     "institution": 9,
+     "date": 10
+    },
+    "misses": [
+     "skew_06.jpg:number got \"\"",
+     "skew_07.jpg:institution got \"Maruia Coastal University\""
+    ]
+   }
+  },
+  "classification": {
+   "genuineSeeded": {
+    "n": 5,
+    "flaggedGenuine": 5
+   },
+   "tamperedSeeded": {
+    "n": 5,
+    "notGenuine": 5
+   },
+   "unknownInstitution": {
+    "n": 10,
+    "notGenuine": 10
+   },
+   "rows": [
+    {
+     "file": "genuine_01.jpg",
+     "label": "genuine",
+     "seeded": true,
+     "cls": "Genuine",
+     "score": 0,
+     "ela": 10,
+     "anomalies": 5
+    },
+    {
+     "file": "tampered_01.jpg",
+     "label": "tampered",
+     "seeded": true,
+     "cls": "Suspicious",
+     "score": 25,
+     "ela": 11,
+     "anomalies": 6
+    },
+    {
+     "file": "genuine_02.jpg",
+     "label": "genuine",
+     "seeded": true,
+     "cls": "Genuine",
+     "score": 0,
+     "ela": 14,
+     "anomalies": 7
+    },
+    {
+     "file": "tampered_02.jpg",
+     "label": "tampered",
+     "seeded": true,
+     "cls": "Suspicious",
+     "score": 30,
+     "ela": 10,
+     "anomalies": 5
+    },
+    {
+     "file": "genuine_03.jpg",
+     "label": "genuine",
+     "seeded": true,
+     "cls": "Genuine",
+     "score": 0,
+     "ela": 12,
+     "anomalies": 6
+    },
+    {
+     "file": "tampered_03.jpg",
+     "label": "tampered",
+     "seeded": true,
+     "cls": "Suspicious",
+     "score": 20,
+     "ela": 8,
+     "anomalies": 4
+    },
+    {
+     "file": "genuine_04.jpg",
+     "label": "genuine",
+     "seeded": true,
+     "cls": "Genuine",
+     "score": 0,
+     "ela": 12,
+     "anomalies": 6
+    },
+    {
+     "file": "tampered_04.jpg",
+     "label": "tampered",
+     "seeded": true,
+     "cls": "Suspicious",
+     "score": 25,
+     "ela": 8,
+     "anomalies": 4
+    },
+    {
+     "file": "genuine_05.jpg",
+     "label": "genuine",
+     "seeded": true,
+     "cls": "Genuine",
+     "score": 0,
+     "ela": 12,
+     "anomalies": 6
+    },
+    {
+     "file": "tampered_05.jpg",
+     "label": "tampered",
+     "seeded": true,
+     "cls": "Suspicious",
+     "score": 30,
+     "ela": 8,
+     "anomalies": 4
+    },
+    {
+     "file": "genuine_06.jpg",
+     "label": "genuine",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 45,
+     "ela": 10,
+     "anomalies": 5
+    },
+    {
+     "file": "tampered_06.jpg",
+     "label": "tampered",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 45,
+     "ela": 4,
+     "anomalies": 2
+    },
+    {
+     "file": "genuine_07.jpg",
+     "label": "genuine",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 45,
+     "ela": 8,
+     "anomalies": 4
+    },
+    {
+     "file": "tampered_07.jpg",
+     "label": "tampered",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 45,
+     "ela": 10,
+     "anomalies": 5
+    },
+    {
+     "file": "genuine_08.jpg",
+     "label": "genuine",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 45,
+     "ela": 10,
+     "anomalies": 5
+    },
+    {
+     "file": "tampered_08.jpg",
+     "label": "tampered",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 45,
+     "ela": 10,
+     "anomalies": 5
+    },
+    {
+     "file": "genuine_09.jpg",
+     "label": "genuine",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 45,
+     "ela": 12,
+     "anomalies": 6
+    },
+    {
+     "file": "tampered_09.jpg",
+     "label": "tampered",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 45,
+     "ela": 10,
+     "anomalies": 5
+    },
+    {
+     "file": "genuine_10.jpg",
+     "label": "genuine",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 45,
+     "ela": 12,
+     "anomalies": 6
+    },
+    {
+     "file": "tampered_10.jpg",
+     "label": "tampered",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 45,
+     "ela": 8,
+     "anomalies": 4
+    }
+   ]
+  },
+  "ela": {
+   "meanGenuine": 11.2,
+   "meanTampered": 8.7,
+   "aucTamperedVsGenuine": 0.16
+  }
+ }
+}

@@ -1,0 +1,252 @@
+[
+ {
+  "file": "tests/eval/genuine_01.jpg",
+  "label": "genuine",
+  "fields": {
+   "name": "Lerato Mokoena",
+   "number": "TUT-2026-10482",
+   "qualification": "Diploma in Information Technology",
+   "institution": "Tshwane University of Technology",
+   "date": "2026-05-15"
+  },
+  "seeded": true
+ },
+ {
+  "file": "tests/eval/tampered_01.jpg",
+  "label": "tampered",
+  "edit": "date",
+  "fields": {
+   "name": "Lerato Mokoena",
+   "number": "TUT-2026-10482",
+   "qualification": "Diploma in Information Technology",
+   "institution": "Tshwane University of Technology",
+   "date": "2025-05-15"
+  },
+  "seeded": true
+ },
+ {
+  "file": "tests/eval/genuine_02.jpg",
+  "label": "genuine",
+  "fields": {
+   "name": "Thando Ndlovu",
+   "number": "UL-2025-77821",
+   "qualification": "Bachelor of Information Science",
+   "institution": "University of Limpopo",
+   "date": "2025-12-10"
+  },
+  "seeded": true
+ },
+ {
+  "file": "tests/eval/tampered_02.jpg",
+  "label": "tampered",
+  "edit": "name",
+  "fields": {
+   "name": "Themba Ndlovu",
+   "number": "UL-2025-77821",
+   "qualification": "Bachelor of Information Science",
+   "institution": "University of Limpopo",
+   "date": "2025-12-10"
+  },
+  "seeded": true
+ },
+ {
+  "file": "tests/eval/genuine_03.jpg",
+  "label": "genuine",
+  "fields": {
+   "name": "Sipho Dlamini",
+   "number": "UJ-2024-33105",
+   "qualification": "BSc Computer Science",
+   "institution": "University of Johannesburg",
+   "date": "2024-12-12"
+  },
+  "seeded": true
+ },
+ {
+  "file": "tests/eval/tampered_03.jpg",
+  "label": "tampered",
+  "edit": "qual",
+  "fields": {
+   "name": "Sipho Dlamini",
+   "number": "UJ-2024-33105",
+   "qualification": "MSc Computer Science",
+   "institution": "University of Johannesburg",
+   "date": "2024-12-12"
+  },
+  "seeded": true
+ },
+ {
+  "file": "tests/eval/genuine_04.jpg",
+  "label": "genuine",
+  "fields": {
+   "name": "Naledi Khumalo",
+   "number": "WITS-2023-55012",
+   "qualification": "BCom Accounting",
+   "institution": "University of the Witwatersrand",
+   "date": "2023-12-08"
+  },
+  "seeded": true
+ },
+ {
+  "file": "tests/eval/tampered_04.jpg",
+  "label": "tampered",
+  "edit": "date",
+  "fields": {
+   "name": "Naledi Khumalo",
+   "number": "WITS-2023-55012",
+   "qualification": "BCom Accounting",
+   "institution": "University of the Witwatersrand",
+   "date": "2022-12-08"
+  },
+  "seeded": true
+ },
+ {
+  "file": "tests/eval/genuine_05.jpg",
+  "label": "genuine",
+  "fields": {
+   "name": "Pieter van Wyk",
+   "number": "UP-2025-90417",
+   "qualification": "Bachelor of Engineering Electrical",
+   "institution": "University of Pretoria",
+   "date": "2025-12-11"
+  },
+  "seeded": true
+ },
+ {
+  "file": "tests/eval/tampered_05.jpg",
+  "label": "tampered",
+  "edit": "name",
+  "fields": {
+   "name": "Pieter van Wyk Jr",
+   "number": "UP-2025-90417",
+   "qualification": "Bachelor of Engineering Electrical",
+   "institution": "University of Pretoria",
+   "date": "2025-12-11"
+  },
+  "seeded": true
+ },
+ {
+  "file": "tests/eval/genuine_06.jpg",
+  "label": "genuine",
+  "fields": {
+   "name": "Zanele Mahlangu",
+   "number": "KTI-2025-20931",
+   "qualification": "Diploma in Business Management",
+   "institution": "Karoo Technical Institute",
+   "date": "2025-07-18"
+  },
+  "seeded": false
+ },
+ {
+  "file": "tests/eval/tampered_06.jpg",
+  "label": "tampered",
+  "edit": "qual",
+  "fields": {
+   "name": "Zanele Mahlangu",
+   "number": "KTI-2025-20931",
+   "qualification": "Advanced Diploma in Business Management",
+   "institution": "Karoo Technical Institute",
+   "date": "2025-07-18"
+  },
+  "seeded": false
+ },
+ {
+  "file": "tests/eval/genuine_07.jpg",
+  "label": "genuine",
+  "fields": {
+   "name": "Kagiso Sithole",
+   "number": "MCU-2024-41277",
+   "qualification": "BA Communication Studies",
+   "institution": "Marula Coastal University",
+   "date": "2024-04-26"
+  },
+  "seeded": false
+ },
+ {
+  "file": "tests/eval/tampered_07.jpg",
+  "label": "tampered",
+  "edit": "date",
+  "fields": {
+   "name": "Kagiso Sithole",
+   "number": "MCU-2024-41277",
+   "qualification": "BA Communication Studies",
+   "institution": "Marula Coastal University",
+   "date": "2023-04-26"
+  },
+  "seeded": false
+ },
+ {
+  "file": "tests/eval/genuine_08.jpg",
+  "label": "genuine",
+  "fields": {
+   "name": "Ayanda Zulu",
+   "number": "NLC-2026-60418",
+   "qualification": "Higher Certificate in Accounting",
+   "institution": "Northern Lights College",
+   "date": "2026-02-13"
+  },
+  "seeded": false
+ },
+ {
+  "file": "tests/eval/tampered_08.jpg",
+  "label": "tampered",
+  "edit": "name",
+  "fields": {
+   "name": "Ayanda Zulu Jr",
+   "number": "NLC-2026-60418",
+   "qualification": "Higher Certificate in Accounting",
+   "institution": "Northern Lights College",
+   "date": "2026-02-13"
+  },
+  "seeded": false
+ },
+ {
+  "file": "tests/eval/genuine_09.jpg",
+  "label": "genuine",
+  "fields": {
+   "name": "Johan Botha",
+   "number": "DVU-2023-18862",
+   "qualification": "Bachelor of Education",
+   "institution": "Drakensberg Valley University",
+   "date": "2023-11-30"
+  },
+  "seeded": false
+ },
+ {
+  "file": "tests/eval/tampered_09.jpg",
+  "label": "tampered",
+  "edit": "qual",
+  "fields": {
+   "name": "Johan Botha",
+   "number": "DVU-2023-18862",
+   "qualification": "Master of Education",
+   "institution": "Drakensberg Valley University",
+   "date": "2023-11-30"
+  },
+  "seeded": false
+ },
+ {
+  "file": "tests/eval/genuine_10.jpg",
+  "label": "genuine",
+  "fields": {
+   "name": "Fatima Patel",
+   "number": "SRI-2025-73350",
+   "qualification": "Diploma in Civil Engineering",
+   "institution": "Southern Ridge Institute",
+   "date": "2025-09-05"
+  },
+  "seeded": false
+ },
+ {
+  "file": "tests/eval/tampered_10.jpg",
+  "label": "tampered",
+  "edit": "date",
+  "fields": {
+   "name": "Fatima Patel",
+   "number": "SRI-2025-73350",
+   "qualification": "Diploma in Civil Engineering",
+   "institution": "Southern Ridge Institute",
+   "date": "2024-09-05"
+  },
+  "seeded": false
+ }
+]
