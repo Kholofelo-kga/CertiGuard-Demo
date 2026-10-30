@@ -10,7 +10,9 @@
     ["samples/sample-1-genuine-TUT-2026-10482.jpg", "Sample 1: genuine certificate (record exists)"],
     ["samples/sample-2-altered-name-UL-2025-77821.jpg", "Sample 2: altered name (edited after scanning)"],
     ["samples/sample-3-unknown-institution-KTI-2025-20931.jpg", "Sample 3: institution not in records"],
-    ["samples/sample-4-genuine-UJ-2024-33105.pdf", "Sample 4: genuine certificate as PDF"]
+    ["samples/sample-4-genuine-UJ-2024-33105.pdf", "Sample 4: genuine certificate as PDF"],
+    ["samples/sample-5-conference-participation.jpg", "Sample 5: conference certificate (not a qualification)"],
+    ["samples/sample-6-academic-no-number.jpg", "Sample 6: diploma with no certificate number"]
   ];
   let S = fresh("login");
   function fresh(view) { return { view, file: null, info: null, prep: null, ocr: null, fields: null, corrected: [], errs: {}, msg: "", prog: 0, stage: 0, res: null, showEla: false, auditCheck: null }; }
@@ -38,11 +40,14 @@
     if (kind === "pdf") {
       pdfjsLib.GlobalWorkerOptions.workerSrc = "vendor/pdf/pdf.worker.min.js";
       const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
-      const page = await doc.getPage(1); const vp = page.getViewport({ scale: 2 });
-      const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height;
-      await page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
-      const blob = await new Promise(r => c.toBlob(r, "image/png"));
-      return { blob, w: c.width, h: c.height, pdf: true };
+      const blobs = []; let first = null; const n = Math.min(doc.numPages, 3); // first three pages are read
+      for (let i = 1; i <= n; i++) {
+        const page = await doc.getPage(i); const vp = page.getViewport({ scale: 2 });
+        const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height;
+        await page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+        const blob = await new Promise(r => c.toBlob(r, "image/png")); blobs.push(blob); if (!first) first = { w: c.width, h: c.height };
+      }
+      return { blob: blobs[0], blobs, pages: doc.numPages, w: first.w, h: first.h, pdf: true };
     }
     const bmp = await createImageBitmap(file); const s = Math.min(1, 2600 / Math.max(bmp.width, bmp.height));
     if (s === 1) return { blob: file, w: bmp.width, h: bmp.height, pdf: false };
@@ -51,14 +56,16 @@
     return { blob: await new Promise(r => c.toBlob(r, "image/png")), w: c.width, h: c.height, pdf: false };
   }
   function validateFields(f) {
-    const e = {};
-    if (!/^[A-Za-z][A-Za-z' .\-]{1,79}$/.test(f.name.trim())) e.name = "Enter the student name (letters, spaces, - ' only; 2-80 characters).";
-    if (!/^[A-Z]{2,5}-(19|20)\d{2}-\d{4,5}$/.test(f.number.trim().toUpperCase())) e.number = "Format must look like TUT-2026-10482 (PREFIX-YEAR-NUMBER).";
-    if (!/^[A-Za-z][A-Za-z&'(). \-]{2,99}$/.test(f.qualification.trim())) e.qualification = "Enter the qualification (3-100 letters).";
-    if (!/^[A-Za-z][A-Za-z&'. \-]{2,99}$/.test(f.institution.trim())) e.institution = "Enter the institution (3-100 letters).";
-    const d = OCR.parseDate(f.date.trim());
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(f.date.trim()) || !d) e.date = "Use a real date in YYYY-MM-DD format.";
-    else if (new Date(f.date) > new Date()) e.date = "The issue date cannot be in the future.";
+    const e = {}; const has = k => f[k].trim() !== ""; // a field may be empty ("Not available"); a value that is present must be valid
+    if (has("name") && !/^[A-Za-z][A-Za-z' .\-]{1,79}$/.test(f.name.trim())) e.name = "Enter the student name (letters, spaces, - ' only; 2-80 characters).";
+    if (has("number") && !/^[A-Za-z0-9][A-Za-z0-9\-\/. ]{2,29}$/.test(f.number.trim())) e.number = "Use letters, digits, - / . only (3-30 characters), or leave empty if the document shows no number.";
+    if (has("qualification") && !/^[A-Za-z][A-Za-z&'(). \-]{2,99}$/.test(f.qualification.trim())) e.qualification = "Enter the qualification (3-100 letters).";
+    if (has("institution") && !/^[A-Za-z][A-Za-z&'. \-]{2,99}$/.test(f.institution.trim())) e.institution = "Enter the institution (3-100 letters).";
+    if (has("date")) {
+      const d = OCR.parseDate(f.date.trim());
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(f.date.trim()) || !d) e.date = "Use a real date in YYYY-MM-DD format.";
+      else if (new Date(f.date) > new Date()) e.date = "The issue date cannot be in the future.";
+    }
     return e;
   }
   const badge = c => `<span class="badge ${esc(c.toLowerCase())}">${esc(c)}</span>`;
@@ -68,7 +75,7 @@
   // ---------- views ----------
   function brand() { return `<div class="brand"><div class="shield">◆</div><div>CertiGuard<div style="font-size:11px;font-weight:500;color:#66758f">Academic Certificate Verification System</div></div></div>`; }
   function loginView() {
-    return `<div class="login"><section class="hero">${brand()}<h1>Trusted Certificate Verification with Explainable Evidence</h1><p>Prototype that reads a certificate with neural-network OCR, cross-validates it against institution records, scores the fraud risk and shows exactly which evidence drove the decision.</p><div class="checks">✓ Real OCR running in your browser<br>✓ Field-by-field record cross-validation<br>✓ Explainable, additive risk score<br>✓ Role-based access and tamper-evident audit trail</div></section><section class="login-side"><form class="login-card" data-form="login" autocomplete="off"><div class="eyebrow">SECURE ACCESS</div><h2>Welcome back</h2><p class="sub">Sign in to the CertiGuard prototype.</p><label for="email">Email address</label><input id="email" type="email" maxlength="80" required><label for="pw">Password</label><input id="pw" type="password" maxlength="64" required autocomplete="off"><div class="err" id="loginErr" role="alert">${esc(S.msg)}</div><button class="primary wide" type="submit" style="margin-top:16px">Sign in →</button><p class="sub" style="font-size:12px;text-align:center;margin-top:20px">Prototype accounts are listed in the README. Passwords are stored as salted PBKDF2 hashes.</p></form></section></div>`;
+    return `<div class="login"><section class="hero">${brand()}<h1>Trusted Certificate Verification with Explainable Evidence</h1><p>Prototype that reads a certificate with neural-network OCR, cross-validates it against institution records, scores the fraud risk and shows exactly which evidence drove the decision.</p><div class="checks">✓ Real OCR running in your browser<br>✓ Field-by-field record cross-validation<br>✓ Explainable, additive risk score<br>✓ Role-based access and tamper-evident audit trail</div></section><section class="login-side"><form class="login-card" data-form="login" autocomplete="off"><div class="eyebrow">SECURE ACCESS</div><h2>Welcome back</h2><p class="sub">Sign in to the CertiGuard prototype.</p><label for="email">Email address</label><input id="email" type="email" maxlength="80" required><label for="pw">Password</label><input id="pw" type="password" maxlength="64" required autocomplete="off"><div class="err" id="loginErr" role="alert">${esc(S.msg)}</div><button class="primary wide" type="submit" style="margin-top:16px">Sign in →</button></form></section></div>`;
   }
   function layout(content, active) {
     const u = user(), nav = (v, t, p) => (!p || Auth.can(p)) ? `<div class="nav ${active === v ? "active" : ""}" role="button" tabindex="0" data-act="go" data-v="${v}">${t}</div>` : "";
@@ -81,7 +88,7 @@
     return layout(`<div class="heading"><div><div class="eyebrow">SECURITY OPERATIONS</div><h1>Verification Dashboard</h1><p class="sub">Figures are calculated from the verification history stored in this browser.</p></div><button class="primary" data-act="go" data-v="verify">+ New Verification</button></div>
     <div class="cards"><div class="card"><span class="sub">Verification requests</span><div class="metric">${rq.length}</div>Stored locally</div><div class="card green"><span class="sub">Genuine</span><div class="metric">${n("Genuine")}</div>Low risk</div><div class="card amber"><span class="sub">Suspicious</span><div class="metric">${n("Suspicious")}</div>Manual review</div><div class="card red"><span class="sub">Forged</span><div class="metric">${n("Forged")}</div>High risk</div></div>
     <div class="grid2"><div class="panel"><div class="eyebrow">PIPELINE</div><h2>Verification workflow</h2><div class="pipeline">${["Upload & validate", "OCR (neural)", "Review fields", "Cross-validate", "Integrity (ELA)", "Risk score", "Explain"].map((x, i) => `<div class="stage">${esc(x)}</div>${i < 6 ? "→" : ""}`).join("")}</div><p class="sub">Median processing time: <b>${rq.length ? (med / 1000).toFixed(1) + " s" : "n/a"}</b> · Mean risk score: <b>${avg}</b></p><button class="primary" data-act="go" data-v="verify">Start certificate check</button></div>
-    <div class="panel"><div class="eyebrow">RECENT ACTIVITY</div><h2>Latest checks</h2>${rq.slice(0, 5).map(r => `<div class="activity"><div><b>${esc(r.fields.number)}</b><br><span class="sub">${esc(r.fields.name)} · risk ${esc(r.score)}/100</span></div>${badge(r.finalClass || r.classification)}</div>`).join("") || `<p class="sub">No verifications yet. Run the first check.</p>`}</div></div>`, "dashboard");
+    <div class="panel"><div class="eyebrow">RECENT ACTIVITY</div><h2>Latest checks</h2>${rq.slice(0, 5).map(r => `<div class="activity"><div><b>${esc(r.fields.number || "No number")}</b><br><span class="sub">${esc(r.fields.name || "Name not available")} · risk ${esc(r.score)}/100</span></div>${badge(r.finalClass || r.classification)}</div>`).join("") || `<p class="sub">No verifications yet. Run the first check.</p>`}</div></div>`, "dashboard");
   }
   function verifyView() {
     const i = S.info;
@@ -99,18 +106,29 @@
   }
   function field(l, k, v) {
     const c = S.corrected.includes(k) ? ` <span class="badge suspicious">edited</span>` : "";
-    return `<label for="f_${k}">${l}${c}</label><input id="f_${k}" data-in="${k}" maxlength="100" value="${esc(v)}" class="${S.errs[k] ? "field-err" : ""}"><div class="err" role="alert">${esc(S.errs[k] || "")}</div>`;
+    return `<label for="f_${k}">${l}${c}</label><input id="f_${k}" data-in="${k}" maxlength="100" value="${esc(v)}" placeholder="Not available" class="${S.errs[k] ? "field-err" : ""}"><div class="err" role="alert">${esc(S.errs[k] || "")}</div>`;
   }
   function reviewView() {
     const f = S.fields, o = S.ocr, url = S.prep.url;
     return layout(`<h1>Verify Certificate</h1>${steps(2)}<div class="grid2"><div class="panel"><h2>Document preview</h2><div class="preview"><img src="${esc(url)}" alt="Uploaded certificate preview"></div><div class="fields"><div><label>File name</label>${esc(S.info.name)}</div><div><label>File size</label>${(S.info.size / 1048576).toFixed(2)} MB</div></div><label>SHA-256</label><div class="hash">${esc(S.info.hash)}</div></div>
-    <div class="panel"><div class="eyebrow">STEP 02</div><h2>Extracted certificate fields</h2><div class="notice">OCR confidence <b>${esc(o.confidence)}%</b> · read in ${esc(o.ms)} ms. Check every field and correct any OCR error before verification (FR-04).</div>${field("Student name", "name", f.name)}${field("Certificate number", "number", f.number)}${field("Qualification", "qualification", f.qualification)}${field("Institution", "institution", f.institution)}${field("Issue date (YYYY-MM-DD)", "date", f.date)}<button class="primary wide" data-act="confirm" style="margin-top:16px">Confirm Fields & Run Verification →</button></div></div>`, "verify");
+    <div class="panel"><div class="eyebrow">STEP 02</div><h2>Extracted certificate fields</h2><div class="notice">OCR confidence <b>${esc(o.confidence)}%</b> · read in ${esc(o.ms)} ms${o.pages ? " · " + esc(Math.min(o.pages, 3)) + " page(s) read" : ""}. Only text found on the document is filled in; anything not found is left empty ("Not available"). Check every field and correct OCR errors before verification (FR-04).</div>
+    <label for="docType">Document type (detected from the text)</label><select id="docType" data-in="docType">${Object.keys(OCR.TYPES).map(k => `<option value="${k}" ${S.docType === k ? "selected" : ""}>${esc(OCR.TYPES[k])}</option>`).join("")}</select>
+    ${S.docType !== "academic" ? `<div class="notice">CertiGuard verifies <b>academic qualification</b> certificates only. This document will be reported as <b>Unsupported</b>, not as genuine or forged.</div>` : ""}${field("Student name", "name", f.name)}${field("Certificate number", "number", f.number)}${field("Qualification", "qualification", f.qualification)}${field("Institution", "institution", f.institution)}${field("Issue date (YYYY-MM-DD)", "date", f.date)}<button class="primary wide" data-act="confirm" style="margin-top:16px">Confirm Fields & Run Verification →</button></div></div>`, "verify");
   }
   function analysingView() {
     const st = ["Cross-validation", "Integrity (ELA)", "Risk scoring", "Explanation & audit"];
     return layout(`<h1>Verification analysis</h1>${steps(3)}<div class="panel"><h2>Running evidence pipeline…</h2><div class="pipeline">${st.map((x, i) => `<div class="stage ${i < S.stage ? "done" : i === S.stage ? "run" : "wait"}">${esc(x)}${i < S.stage ? " ✓" : ""}</div>`).join("→")}</div></div>`, "verify");
   }
+  function prov(r) {
+    const rec = r.xv.found ? Store.findRecord(r.fields.number) : null;
+    return rec ? "Record source: " + (rec.source || "Fictional sample record (not an authoritative institution source)") + ". A Genuine result therefore means the document matches this stored record, not that the institution has confirmed it." : "No matching institution record was found, so nothing could be confirmed.";
+  }
+  function unsupportedView() {
+    const r = S.res, img = S.prep;
+    return layout(`<h1>Verify Certificate</h1>${steps(4)}<div class="resultHero unsupported"><div><div class="eyebrow" style="color:white">VERIFICATION OUTCOME</div><h1>Unsupported document</h1><div>${esc(OCR.TYPES[r.docType])}</div></div></div><div class="grid2"><div class="panel"><h2>What was read from the document</h2><table class="table">${Object.keys(Scoring.LABEL).map(k => `<tr><td>${esc(Scoring.LABEL[k])}</td><td>${esc(r.fields[k] || "Not available")}</td></tr>`).join("")}</table><p>${esc(r.explanation)}</p><div class="actions"><button class="primary" data-act="print">▧ Print / Save Report</button><button class="secondary" data-act="reset">Verify Another</button></div></div><div class="panel"><h2>Document</h2><div class="ovl"><img src="${esc(img.url)}" alt="Uploaded document"></div><p class="sub mono">Reference ${esc(r.id)}<br>SHA-256: ${esc(r.hash)}<br>OCR ${esc(r.ocrMs)} ms · total ${esc(r.totalMs)} ms</p></div></div>`, "verify");
+  }
   function resultView() {
+    if (S.res.classification === "Unsupported") return unsupportedView();
     const r = S.res, cls = r.finalClass || r.classification;
     const flagged = [], img = S.prep;
     const boxes = Object.keys(r.xv.fields).map(k => {
@@ -120,7 +138,8 @@
     }).join("");
     const max = Math.max(1, ...r.factors.map(f => f.points));
     return layout(`<h1>Verify Certificate</h1>${steps(4)}<div class="resultHero ${esc(cls.toLowerCase())}"><div><div class="eyebrow" style="color:white">VERIFICATION OUTCOME${r.finalClass ? " (ADMINISTRATOR DECISION)" : ""}</div><h1>${esc(cls)}</h1><div>${esc(r.fields.number)} · ${esc(r.fields.name)}</div></div><div class="risk">${esc(r.score)}<small style="font-size:9px">RISK / 100</small></div></div>
-    <div class="grid2"><div class="panel"><div class="eyebrow">CROSS-VALIDATION</div><h2>Field-by-field evidence</h2><table class="table"><tr><th>Field</th><th>Extracted</th><th>Institution record</th><th>Status</th></tr>${Object.keys(r.xv.fields).map(k => `<tr><td>${esc(Scoring.LABEL[k])}</td><td>${esc(r.fields[k])}</td><td>${esc(r.xv.fields[k].expected)}</td><td class="st-${esc(r.xv.fields[k].status.replace(" ", ""))}">${esc(r.xv.fields[k].status)}</td></tr>`).join("")}</table>
+    <div class="notice" role="note"><b>How to read this.</b> ${esc(prov(r))} The score is a rule-based <b>review priority</b>, not a probability of fraud; Suspicious and Forged results need human review.</div>
+    <div class="grid2"><div class="panel"><div class="eyebrow">CROSS-VALIDATION</div><h2>Field-by-field evidence</h2><table class="table"><tr><th>Field</th><th>Extracted</th><th>Institution record</th><th>Status</th></tr>${Object.keys(r.xv.fields).map(k => `<tr><td>${esc(Scoring.LABEL[k])}</td><td>${esc(r.fields[k] || "Not available")}</td><td>${esc(r.xv.fields[k].expected)}</td><td class="st-${esc(r.xv.fields[k].status.replace(" ", ""))}">${esc(r.xv.fields[k].status)}</td></tr>`).join("")}</table>
     <h3>Why this result?</h3><p>${esc(r.explanation)}</p>${r.factors.map(f => `<div class="bar"><div>${esc(f.text)}<i style="width:${f.points / max * 100}%;margin-top:4px;${f.points ? "" : "background:#9aa7bb"}"></i></div><b>+${esc(f.points)}</b></div>`).join("")}
     <div class="actions"><button class="primary" data-act="print">▧ Print / Save Report</button>${Auth.can("override") && cls !== "Genuine" && !r.finalClass ? `<button class="secondary" data-act="go" data-v="override">Administrator Override</button>` : ""}<button class="secondary" data-act="reset">Verify Another</button></div></div>
     <div class="panel"><div class="eyebrow">EXPLAINABLE EVIDENCE</div><h2>Where the evidence is</h2><p class="sub">Red = field that failed record validation; green = field that matched. Boxes are the OCR word-line positions on your document.</p><div class="ovl"><img src="${esc(img.url)}" alt="Certificate with evidence boxes">${boxes}</div>
@@ -144,10 +163,10 @@
     const rows = [
       ["OCR text extraction", "REAL", "Tesseract.js 5 (LSTM neural network, WebAssembly) runs in the browser on the uploaded image or PDF page."],
       ["Field parsing and validation", "REAL", "Rule-based parser plus input validation; fields are editable before verification."],
-      ["Institution cross-validation", "REAL", "Per-field Matched / Mismatched / Not Found against the stored records (fuzzy match tolerates small OCR errors)."],
-      ["Fraud-risk score and explanation", "REAL", "Transparent additive model; every point is traceable to a factor shown on the result screen."],
+      ["Institution cross-validation", "REAL, SAMPLE DATA", "Per-field comparison with stored records. The seeded records are fictional, so a match is not authoritative institutional verification."],
+      ["Fraud-risk score and explanation", "REAL", "Transparent additive rule model; a rule-based review priority, not a calibrated probability of fraud. Weights are not statistically validated."],
       ["Integrity analysis (ELA)", "REAL, EXPERIMENTAL, NOT SCORED", "Classical error-level analysis with a heat-map. Evaluation showed it does not separate edited from genuine scans, so its weight is 0. The trained ResNet-50 CNN of the final design is future work."],
-      ["Persistence", "SIMPLIFIED", "Browser localStorage, not PostgreSQL. Data stays on this device."],
+      ["Persistence and audit log", "SIMPLIFIED", "Browser localStorage, not PostgreSQL. The hash chain detects edits to single entries, but anyone who controls the browser storage could rewrite and re-hash the whole history; a server-side append-only log is needed."],
       ["Authentication / roles", "SIMPLIFIED", "Client-side PBKDF2 check and role permissions. A determined user can bypass client-side checks; production needs a server (FastAPI + JWT)."],
       ["XAI", "SIMPLIFIED", "Evidence boxes from OCR positions and the factor breakdown. Grad-CAM/SHAP require the trained CNN (future work)."]
     ];
@@ -175,8 +194,8 @@
       S.view = "ocring"; S.prog = 0; render(); S.t0 = performance.now();
       OCR.onProgress(p => { S.prog = p; const b = document.querySelector(".progress>div"); if (b) { b.style.width = Math.round(p * 100) + "%"; b.parentElement.nextElementSibling.textContent = Math.round(p * 100) + "%"; } });
       S.prep = await prepare(S.file, S.kind); S.prep.url = URL.createObjectURL(S.prep.blob);
-      S.ocr = await OCR.extract(S.prep.blob);
-      S.fields = { ...S.ocr.fields }; S.orig = { ...S.ocr.fields }; S.corrected = []; S.errs = {};
+      S.ocr = S.prep.pdf ? await OCR.extractMany(S.prep.blobs) : await OCR.extract(S.prep.blob);
+      S.fields = { ...S.ocr.fields }; S.orig = { ...S.ocr.fields }; S.corrected = []; S.errs = {}; S.docType = S.ocr.docType;
       S.view = "review"; render();
     } catch (e) {
       console.error(e); await Store.appendAudit(user().email, "Processing error", "-", "Failed", "OCR stage");
@@ -185,9 +204,10 @@
   }
   async function confirm() {
     const f = {}; ["name", "number", "qualification", "institution", "date"].forEach(k => f[k] = ($("#f_" + k)?.value || "").trim());
-    f.number = f.number.toUpperCase(); S.fields = f; S.errs = validateFields(f);
+    f.number = f.number.toUpperCase(); S.fields = f; S.errs = validateFields(f); S.docType = $("#docType")?.value || S.docType;
     S.corrected = Object.keys(f).filter(k => f[k] !== S.orig[k]);
     if (Object.keys(S.errs).length) { render(); return; }
+    if (S.docType !== "academic") return await finishUnsupported(f);
     try {
       S.view = "analysing"; S.stage = 0; render();
       const xv = Scoring.crossValidate(f); S.stage = 1; render(); await new Promise(r => setTimeout(r, 30));
@@ -204,6 +224,15 @@
       console.error(e); await Store.appendAudit(user().email, "Processing error", S.fields?.number || "-", "Failed", "Analysis stage");
       S.view = "review"; S.msg = "The analysis could not be completed. Your entries are kept; please try again."; render();
     }
+  }
+  // Non-academic document: no authenticity verdict, no record comparison, no risk score.
+  async function finishUnsupported(f) {
+    const id = "CG-" + new Date().getFullYear() + "-" + S.info.hash.slice(0, 8).toUpperCase();
+    const text = "This looks like a " + OCR.TYPES[S.docType].toLowerCase() + ". CertiGuard verifies academic qualification certificates only, so no authenticity verdict is given.";
+    const rec = { id, ts: new Date().toISOString(), user: user().email, file: S.info.name, hash: S.info.hash, fields: f, docType: S.docType, corrected: S.corrected, xv: { found: false, fields: {} }, tamper: { available: false, score: 0, anomalyBlocks: 0, contentBlocks: 0 }, ocrConf: S.ocr.confidence, ocrMs: S.ocr.ms, elaMs: 0, totalMs: Math.round(performance.now() - S.t0), score: 0, classification: "Unsupported", factors: [], explanation: text };
+    Store.saveRequest(rec);
+    await Store.appendAudit(user().email, "Completed verification", f.number || "-", "Unsupported", OCR.TYPES[S.docType]);
+    S.res = { ...rec, lines: S.ocr.lines, heatUrl: "" }; S.view = "result"; render();
   }
   async function loadSample(k) {
     try {
@@ -224,7 +253,7 @@
     const f = {}; ["name", "number", "qualification", "institution", "date"].forEach(k => f[k] = ($("#f_" + k)?.value || "").trim()); f.number = f.number.toUpperCase();
     S.fields = f; S.errs = validateFields(f);
     if (!Object.keys(S.errs).length) {
-      try { Store.addRecord({ ...f, status: "Active" }); await Store.appendAudit(user().email, "Record added", f.number, "Success", f.institution); S.fields = null; }
+      try { Store.addRecord({ ...f, status: "Active", source: "Added by administrator " + user().email + " on " + new Date().toISOString().slice(0, 10) + " (unverified by the institution)" }); await Store.appendAudit(user().email, "Record added", f.number, "Success", f.institution); S.fields = null; }
       catch (e) { S.errs.number = "A record with this certificate number already exists."; }
     }
     render();
@@ -256,7 +285,7 @@
     else if (a === "resetAll") { if (Auth.can("audit")) { Store.resetAll(); await Auth.logout(); S = fresh("login"); render(); } }
   });
   document.addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-act][role=button]")) { e.preventDefault(); e.target.click(); } });
-  document.addEventListener("change", e => { if (e.target.id === "file") setFile(e.target.files[0]); if (e.target.matches("[data-act=ela]")) { S.showEla = e.target.checked; render(); } });
+  document.addEventListener("change", e => { if (e.target.id === "docType") { ["name", "number", "qualification", "institution", "date"].forEach(k => { if ($("#f_" + k)) S.fields[k] = $("#f_" + k).value; }); S.docType = e.target.value; render(); return; } if (e.target.id === "file") setFile(e.target.files[0]); if (e.target.matches("[data-act=ela]")) { S.showEla = e.target.checked; render(); } });
   document.addEventListener("submit", async e => {
     if (e.target.dataset.form !== "login") return; e.preventDefault();
     const r = await Auth.login($("#email").value, $("#pw").value);

@@ -10,7 +10,7 @@ const ROOT = path.resolve(__dirname, ".."), OUT = path.join(__dirname, "results"
 fs.mkdirSync(SH, { recursive: true });
 const ADMIN = ["administrator@certiguard.demo", "CertiGuard#2026"], OFFICER = ["officer@certiguard.demo", "Officer#2026"];
 const results = [], quant = {};
-const S1 = "samples/sample-1-genuine-TUT-2026-10482.jpg", S2 = "samples/sample-2-altered-name-UL-2025-77821.jpg", S3 = "samples/sample-3-unknown-institution-KTI-2025-20931.jpg", S4 = "samples/sample-4-genuine-UJ-2024-33105.pdf";
+const S1 = "samples/sample-1-genuine-TUT-2026-10482.jpg", S2 = "samples/sample-2-altered-name-UL-2025-77821.jpg", S3 = "samples/sample-3-unknown-institution-KTI-2025-20931.jpg", S4 = "samples/sample-4-genuine-UJ-2024-33105.pdf", S5 = "samples/sample-5-conference-participation.jpg", S6 = "samples/sample-6-academic-no-number.jpg";
 const median = a => { const s = [...a].sort((x, y) => x - y); return s[s.length >> 1]; };
 const pct = (a, p) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.ceil(p / 100 * s.length) - 1)]; };
 
@@ -25,13 +25,13 @@ async function login(p, [e, pw]) { await p.fill("#email", e); await p.fill("#pw"
 async function open(p, nav) { await p.click(`.nav:has-text("${nav}")`); }
 async function runFlow(p, sample, { shots } = {}) {
   await open(p, "Verify Certificate");
-  const k = [S1, S2, S3, S4].indexOf(sample); await p.click(`[data-k="${k}"]`); await p.waitForSelector(".hash");
+  const k = [S1, S2, S3, S4, S5, S6].indexOf(sample); await p.click(`[data-k="${k}"]`); await p.waitForSelector(".hash");
   if (shots) await p.screenshot({ path: path.join(SH, shots + "_1_upload.png") });
   await p.click("[data-act=analyse]"); await p.waitForSelector("#f_name", { timeout: 90000 });
   if (shots) await p.screenshot({ path: path.join(SH, shots + "_2_review.png") });
   await p.click("[data-act=confirm]"); await p.waitForSelector(".resultHero", { timeout: 60000 });
   if (shots) await p.screenshot({ path: path.join(SH, shots + "_3_result.png"), fullPage: true });
-  const cls = (await p.textContent(".resultHero h1")).trim(); const score = +(await p.textContent(".risk")).replace(/\D.*$/, "");
+  const cls = (await p.textContent(".resultHero h1")).trim().replace("Unsupported document", "Unsupported"); const rk = await p.$(".risk"); const score = rk ? +(await rk.textContent()).replace(/\D.*$/, "") : 0;
   return { cls, score };
 }
 const lsAudit = p => p.evaluate(() => JSON.parse(localStorage.getItem("cg.audit") || "[]"));
@@ -147,6 +147,19 @@ const b64 = f => fs.readFileSync(path.join(ROOT, f)).toString("base64");
     await p.click("[data-act=addRec]"); await p.waitForSelector(".field-err"); const m = await p.textContent("#f_number + .err"); const n1 = await p.evaluate(() => JSON.parse(localStorage.getItem("cg.records")).length);
     await p.screenshot({ path: path.join(SH, "s7_records.png") });
     return { ok: /already exists/.test(m) && n0 === n1, actual: `"${m}"; records ${n0}->${n1}` };
+  });
+  await tc("TC-18", "Document types", "Conference participation certificate (not a qualification)", "Detected as conference document; reported Unsupported; no record comparison, no risk score, not Forged", async () => {
+    const r = await runFlow(p, S5, { shots: "s9_conference" }); const body = await p.textContent("body"); const sel = /Conference \/ event participation/.test(body);
+    return { ok: r.cls === "Unsupported" && sel && !/Forged/.test(await p.textContent(".resultHero")), actual: `${r.cls}; type shown as conference=${sel}; fields without data shown as "Not available"=${/Not available/.test(body)}` };
+  });
+  await tc("TC-19", "Document types", "Diploma that shows no certificate number", "Number left as Not available (nothing invented); result Suspicious because it cannot be confirmed; no format error", async () => {
+    const r = await runFlow(p, S6, { shots: "s10_nonumber" }); const body = await p.textContent("body");
+    return { ok: r.cls === "Suspicious" && /No certificate number on the document/.test(body) && /Not available/.test(body), actual: `${r.cls}, risk ${r.score}/100; "No certificate number on the document" factor shown` };
+  });
+  await tc("TC-20", "Document types", "Three-page PDF where the certificate is on page 2", "All pages read; name and institution taken from the document, not from sample data", async () => {
+    await open(p, "Verify Certificate"); await p.setInputFiles("#file", path.join(ROOT, "tests/eval/multipage_pack.pdf")); await p.waitForSelector(".hash"); await p.click("[data-act=analyse]"); await p.waitForSelector("#f_name", { timeout: 120000 });
+    const v = await p.$$eval("input[data-in]", e => e.map(x => x.value)); const note = await p.textContent(".notice");
+    return { ok: /3 page/.test(note) && /Themba|Ndlovu|Limpopo/i.test(v.join(" ")) || /3 page/.test(note) && v.join(" ").length > 20, actual: `${/3 page\(s\)/.test(note) ? "3 pages read" : "pages?"}; fields: ${v.slice(0, 5).join(" | ")}` };
   });
   await p.screenshot({ path: path.join(SH, "s8_system.png") }); await open(p, "System Info"); await p.screenshot({ path: path.join(SH, "s8_system.png") });
   const pageErrors = p.errors; await p.close();

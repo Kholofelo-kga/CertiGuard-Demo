@@ -37,3 +37,5 @@ input,textarea{width:100%;padding:13px;border:1px solid #cbd6e5;border-radius:9p
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.sm{font-size:12px}.who{margin-top:260px;padding:12px;font-size:13px}
 .link{background:none;border:0;color:var(--blue);font-weight:750;padding:0;text-decoration:underline}
 textarea{resize:vertical}
+.resultHero.unsupported{background:linear-gradient(120deg,#46546b,#6b7a93)}.badge.unsupported{background:#e8ecf2;color:#46546b}
+select{width:100%;padding:13px;border:1px solid #cbd6e5;border-radius:9px;background:#fff;font:inherit}

@@ -36,12 +36,13 @@
         const ok = k === "date" ? f[k] === rec[k] : sim(f[k], rec[k]) >= 0.88; // tolerates 1-2 OCR character errors
         out[k] = { status: ok ? "Matched" : "Mismatched", expected: rec[k] };
       });
-      return { record: rec || null, fields: out, found };
+      return { record: rec || null, fields: out, found, missingNumber: !String(f.number || "").trim() };
     },
     score(xv, tamper, ocrConf) {
       const factors = []; let total = 0;
       for (const k of ["number", "name", "qualification", "institution", "date"]) {
         const st = xv.fields[k].status;
+        if (k === "number" && xv.missingNumber) { total += W.number; factors.push({ key: k, points: W.number, text: "No certificate number on the document, so the record could not be located: authenticity cannot be confirmed" }); continue; }
         if (st === "Matched") continue;
         // when the certificate number is unknown, the other fields cannot be compared; do not double count
         if (st === "Not Found" && k !== "number") continue;

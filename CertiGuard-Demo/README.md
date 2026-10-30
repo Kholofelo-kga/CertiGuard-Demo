@@ -4,6 +4,7 @@ Browser-based academic certificate verification prototype. Fictional data only.
 
 ## What is real
 - OCR: Tesseract.js 5 (LSTM neural network, WebAssembly) in a Web Worker; PDF page 1 rendered with pdf.js
+- Document-type detection (academic / conference / professional / unsupported); missing fields stay "Not available"; any certificate-number format
 - Field parsing and validation, per-field cross-validation against institution records
 - Transparent additive fraud-risk score and explanation; evidence boxes from OCR line positions
 - Login (PBKDF2-SHA256 hashes), roles, lock-out, hash-chained audit trail, CSP, escaped output

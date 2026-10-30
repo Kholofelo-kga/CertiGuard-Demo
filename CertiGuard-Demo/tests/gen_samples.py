@@ -106,3 +106,25 @@ for i in range(10):
         deg.append(dict(file=f"tests/eval/degraded/{kind}_{i+1:02d}.jpg", kind=kind, fields=t["fields"]))
 json.dump(deg, open("tests/eval/degraded_truth.json", "w"), indent=1)
 print(len(deg), "degraded images written")
+
+# ---- document-type samples (not part of the accuracy evaluation) ----
+def conference_cert():
+    img = Image.new("RGB", (W, H), PAPER); dr = ImageDraw.Draw(img)
+    dr.rectangle([30, 30, W - 30, H - 30], outline=(90, 20, 110), width=8)
+    centre(dr, 110, "SOUTHERN AFRICA COMPUTING CONFERENCE 2026", F("DejaVuSerif-Bold.ttf", 40), (90, 20, 110))
+    centre(dr, 200, "CERTIFICATE OF PARTICIPATION", F("DejaVuSans.ttf", 28), (90, 90, 90))
+    centre(dr, 330, "This is to certify that", F("DejaVuSerif.ttf", 30))
+    centre(dr, 390, "Mpho Radebe", F("DejaVuSerif-Bold.ttf", 56))
+    centre(dr, 500, "attended and presented a paper at the conference", F("DejaVuSerif.ttf", 30))
+    centre(dr, 560, "held in Pretoria on 12 September 2026", F("DejaVuSerif.ttf", 30))
+    dr.line([950, 830, 1250, 830], fill=(25, 25, 25), width=2); dr.text((1010, 840), "Conference chair", font=F("DejaVuSans.ttf", 24), fill=(60, 60, 60))
+    arr = np.asarray(img).astype(np.float32) + np.random.normal(0, 2.5, (H, W, 3)); return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
+jpeg(conference_cert(), 85).save("samples/sample-5-conference-participation.jpg", "JPEG", quality=85)
+
+def diploma_no_number():
+    c = dict(number="", name="Busisiwe Nkosi", qualification="National Diploma in Nursing", institution="Eastern Cape Polytechnic", date="2025-11-21")
+    img = base(dict(c, number="X")); dr = ImageDraw.Draw(img)
+    dr.rectangle([125, 695, 760, 745], fill=PAPER)   # no certificate number is printed on this document
+    arr = np.asarray(img).astype(np.float32) + np.random.normal(0, 1.5, (H, W, 3)); return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
+jpeg(diploma_no_number(), 85).save("samples/sample-6-academic-no-number.jpg", "JPEG", quality=85)
+print("document-type samples written")

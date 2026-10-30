@@ -1,5 +1,5 @@
 {
- "when": "2026-10-30T20:03:18.520Z",
+ "when": "2026-10-30T20:54:41.420Z",
  "base": "http://localhost:8765",
  "tests": [
   {
@@ -137,29 +137,53 @@
    "expected": "Rejected with duplicate message; record count unchanged",
    "actual": "\"A record with this certificate number already exists.\"; records 5->5",
    "status": "Pass"
+  },
+  {
+   "id": "TC-18",
+   "area": "Document types",
+   "name": "Conference participation certificate (not a qualification)",
+   "expected": "Detected as conference document; reported Unsupported; no record comparison, no risk score, not Forged",
+   "actual": "Unsupported; type shown as conference=true; fields without data shown as \"Not available\"=true",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-19",
+   "area": "Document types",
+   "name": "Diploma that shows no certificate number",
+   "expected": "Number left as Not available (nothing invented); result Suspicious because it cannot be confirmed; no format error",
+   "actual": "Suspicious, risk 45/100; \"No certificate number on the document\" factor shown",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-20",
+   "area": "Document types",
+   "name": "Three-page PDF where the certificate is on page 2",
+   "expected": "All pages read; name and institution taken from the document, not from sample data",
+   "actual": "3 pages read; fields: Thando Ndlovu | UL-2025-77821 | Bachelor of Information Science | University of Limpopo | 2025-12-10",
+   "status": "Pass"
   }
  ],
  "pageErrors": [],
  "quant": {
   "latency": {
    "n": 10,
-   "coldTotalMs": 4670,
+   "coldTotalMs": 4629,
    "warmTotalMs": [
-    3565,
-    3547,
-    3044,
-    3563,
+    3104,
+    3046,
+    3538,
+    3053,
     3048,
-    3606,
-    3540,
-    3559,
-    3058
+    3581,
+    3569,
+    3041,
+    3054
    ],
-   "warmMedianMs": 3547,
-   "warmP95Ms": 3606,
-   "warmMaxMs": 3606,
-   "warmOcrMedianMs": 789,
-   "warmElaMedianMs": 1105,
+   "warmMedianMs": 3054,
+   "warmP95Ms": 3581,
+   "warmMaxMs": 3581,
+   "warmOcrMedianMs": 762,
+   "warmElaMedianMs": 1099,
    "under10sPct": 100
   },
   "taskCompletion": {
@@ -226,7 +250,7 @@
      "date": 10
     },
     "misses": [
-     "skew_06.jpg:number got \"\"",
+     "skew_06.jpg:number got \"KT1-2025-20931\"",
      "skew_07.jpg:institution got \"Maruia Coastal University\""
     ]
    }

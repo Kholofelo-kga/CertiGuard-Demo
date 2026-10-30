@@ -25,12 +25,13 @@
     { email: "officer@certiguard.demo", name: "Officer Demo", role: "Verification Officer",
       salt: "b1f8fdb400dc767be90d96ba68a679f0", hash: "c622f792c76bbf336df151bb2329ef3151374db65c832b5ce9bb25daaa9eae02" }
   ];
+  const SRC = "Fictional sample record (not an authoritative institution source)";
   const SEED_RECORDS = [
-    { number: "TUT-2026-10482", name: "Lerato Mokoena", qualification: "Diploma in Information Technology", institution: "Tshwane University of Technology", date: "2026-05-15", status: "Active" },
-    { number: "UL-2025-77821", name: "Thando Ndlovu", qualification: "Bachelor of Information Science", institution: "University of Limpopo", date: "2025-12-10", status: "Active" },
-    { number: "UJ-2024-33105", name: "Sipho Dlamini", qualification: "BSc Computer Science", institution: "University of Johannesburg", date: "2024-12-12", status: "Active" },
-    { number: "WITS-2023-55012", name: "Naledi Khumalo", qualification: "BCom Accounting", institution: "University of the Witwatersrand", date: "2023-12-08", status: "Active" },
-    { number: "UP-2025-90417", name: "Pieter van Wyk", qualification: "Bachelor of Engineering Electrical", institution: "University of Pretoria", date: "2025-12-11", status: "Active" }
+    { number: "TUT-2026-10482", name: "Lerato Mokoena", qualification: "Diploma in Information Technology", institution: "Tshwane University of Technology", date: "2026-05-15", status: "Active", source: SRC },
+    { number: "UL-2025-77821", name: "Thando Ndlovu", qualification: "Bachelor of Information Science", institution: "University of Limpopo", date: "2025-12-10", status: "Active", source: SRC },
+    { number: "UJ-2024-33105", name: "Sipho Dlamini", qualification: "BSc Computer Science", institution: "University of Johannesburg", date: "2024-12-12", status: "Active", source: SRC },
+    { number: "WITS-2023-55012", name: "Naledi Khumalo", qualification: "BCom Accounting", institution: "University of the Witwatersrand", date: "2023-12-08", status: "Active", source: SRC },
+    { number: "UP-2025-90417", name: "Pieter van Wyk", qualification: "Bachelor of Engineering Electrical", institution: "University of Pretoria", date: "2025-12-11", status: "Active", source: SRC }
   ];
 
   const Store = {

@@ -34,15 +34,36 @@
     if (m) { const mo = MONTHS[m[1].slice(0, 3).toLowerCase()], d = +m[2], y = +m[3]; if (validIso(y, mo, d)) return y + "-" + pad(mo) + "-" + pad(d); }
     return "";
   }
+  // Certificate number: formats differ between institutions, so a labelled value is preferred
+  // ("Certificate No: X", "Reference: X", "Serial: X"); the PREFIX-YEAR-NUMBER pattern is only a fallback.
+  // Returns "" when the document shows no certificate number (the field is then "Not available").
   function parseNumber(t) {
+    const lab = t.match(/\b(?:certificate|cert\.?|reference|ref\.?|serial|diploma|document|award)\s*(?:no\.?|number|nr\.?|#)\s*[:\-]?\s*([A-Z0-9][A-Z0-9\-\/\.]{3,29})/i);
+    if (lab) return lab[1].toUpperCase().replace(/[.\-\/]+$/, "");
     const m = t.match(/\b([A-Z]{2,5})\s?[-–—]\s?((?:19|20)\d{2})\s?[-–—]\s?(\d{4,5})\b/);
     return m ? m[1] + "-" + m[2] + "-" + m[3] : "";
+  }
+  // Document type from the visible text: academic qualification, conference participation,
+  // professional certification, or unsupported. CertiGuard verifies academic qualifications only.
+  const TYPES = { academic: "Academic qualification", conference: "Conference / event participation", professional: "Professional certification", unsupported: "Unsupported document" };
+  function detectType(t) {
+    const academic = (t.match(/\b(diploma|bachelor|b\.?sc|b\.?com|honours|master|doctor|degree|higher certificate|national certificate|advanced certificate)\b/gi) || []).length;
+    const body = /\b(university|college|institute|academy|school of)\b/i.test(t);
+    const conf = (t.match(/\b(conference|symposium|workshop|proceedings|participation|participated|attendance|attended|presenter|presented|keynote|summit|seminar|webinar)\b/gi) || []).length;
+    const prof = (t.match(/\b(certified|certification|credential|exam|microsoft|aws|cisco|comptia|pmi|oracle|issued by)\b/gi) || []).length;
+    if (academic >= 1 && body && academic >= conf) return "academic";
+    if (conf >= 1) return "conference";
+    if (prof >= 1 && !academic) return "professional";
+    return academic >= 1 ? "academic" : "unsupported";
   }
   // Field parser: heuristics over the OCR lines (labels such as "certify that" / "awarded the").
   function parseFields(text) {
     const lines = text.split(/\r?\n/).map(clean).filter(l => l.length > 2);
-    const f = { name: "", number: parseNumber(text), qualification: "", institution: "", date: parseDate(text) };
-    const inst = lines.find(l => /\b(university|college|institute)\b/i.test(l) && !/^this is to certify/i.test(l));
+    const f = { name: "", number: parseNumber(text), qualification: "", institution: "", date: "" };
+    const dl = lines.find(l => /(issue|issued|awarded|conferred|date)/i.test(l) && !/(birth|born|dob)/i.test(l) && parseDate(l));
+    f.date = dl ? parseDate(dl) : parseDate(lines.filter(l => !/(birth|born|dob)/i.test(l)).join("\n"));
+    // issuing organisation: first matching line near the top of the document (not a footer line)
+    const inst = lines.slice(0, Math.max(6, Math.ceil(lines.length * 0.5))).find(l => /\b(university|college|institute|academy)\b/i.test(l) && !/^this is to certify/i.test(l));
     if (inst) f.institution = title(inst.replace(/[^A-Za-z&'\- ]/g, "").trim());
     for (let i = 0; i < lines.length; i++) {
       if (/(certify that|awarded to|presented to|conferred (up)?on)/i.test(lines[i]) && !f.name) {
@@ -68,7 +89,7 @@
       const fields = parseFields(data.text || "");
       const lines = [];
       (data.blocks || []).forEach(b => (b.paragraphs || []).forEach(p => (p.lines || []).forEach(l => lines.push({ text: clean(l.text || ""), bbox: l.bbox }))));
-      return { text: data.text || "", confidence: Math.round(data.confidence || 0), fields, lines, ms: Math.round(performance.now() - t0) };
+      return { text: data.text || "", confidence: Math.round(data.confidence || 0), fields, lines, docType: detectType(data.text || ""), ms: Math.round(performance.now() - t0) };
     },
     // Finds the OCR line that contains a field value, so the interface can highlight the evidence on the document.
     locate(lines, value) {
@@ -82,7 +103,14 @@
       }
       return bs >= 0.5 ? best : null;
     },
-    parseFields, parseDate, parseNumber
+    // OCR for several images (pages of a PDF): text is merged for field parsing, line boxes come from page 1.
+    async extractMany(blobs) {
+      const t0 = performance.now(); const parts = []; let conf = 0;
+      for (let i = 0; i < blobs.length; i++) { onProg(0); parts.push(await OCR.extract(blobs[i])); conf += parts[i].confidence; }
+      const text = parts.map(p => p.text).join("\n");
+      return { text, confidence: Math.round(conf / parts.length), fields: parseFields(text), lines: parts[0].lines, pages: parts.length, docType: detectType(text), ms: Math.round(performance.now() - t0) };
+    },
+    TYPES, detectType, parseFields, parseDate, parseNumber
   };
   G.CG.OCR = OCR;
 })(window);
