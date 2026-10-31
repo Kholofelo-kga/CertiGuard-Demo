@@ -1,35 +1,41 @@
 {
- "threshold": 0.9475806355476379,
- "n_test": 270,
- "accuracy": 0.937037037037037,
- "precision": 0.8476190476190476,
- "recall": 0.9888888888888889,
- "f1": 0.9128205128205128,
- "auc": 0.99,
- "fpr_genuine": 0.022222222222222223,
- "fpr_benign": 0.15555555555555556,
+ "threshold": 0.9811000227928162,
+ "n_test": 600,
+ "accuracy": 0.9033333333333333,
+ "precision": 0.8663101604278075,
+ "recall": 0.8307692307692308,
+ "f1": 0.8481675392670157,
+ "auc": 0.9530484330484331,
+ "fpr_genuine": 0.044444444444444446,
+ "fpr_benign": 0.07037037037037037,
  "recall_by_type": {
   "copy_paste": 1.0,
   "local_blur": 1.0,
-  "text_date": 1.0,
-  "text_name": 0.9444444444444444,
-  "text_qual": 1.0
+  "logo_edit": 0.21428571428571427,
+  "seal_edit": 1.0,
+  "signature_edit": 0.37037037037037035,
+  "text_date": 0.8333333333333334,
+  "text_name": 1.0,
+  "text_qual": 0.9523809523809523
  },
  "fpr_by_benign": {
-  "benign_blur": 0.09090909090909091,
-  "benign_bright": 0.0,
-  "benign_resave": 0.0,
-  "benign_resize": 0.2857142857142857,
-  "benign_rotate": 0.34615384615384615
+  "benign_blur": 0.01694915254237288,
+  "benign_bright": 0.09090909090909091,
+  "benign_resave": 0.046875,
+  "benign_resize": 0.11627906976744186,
+  "benign_rotate": 0.10204081632653061
  },
  "auc_by_type": {
   "copy_paste": 1.0,
   "local_blur": 1.0,
-  "text_date": 1.0,
-  "text_name": 0.9975308641975309,
-  "text_qual": 1.0
+  "logo_edit": 0.9116402116402116,
+  "seal_edit": 0.9972486772486773,
+  "signature_edit": 0.7791495198902607,
+  "text_date": 0.9712962962962963,
+  "text_name": 0.9991021324354658,
+  "text_qual": 0.9530864197530864
  },
- "localisation": 1.0,
+ "localisation": 0.9538461538461539,
  "params": 116369,
- "train_tiles": 62840
+ "train_tiles": 88962
 }

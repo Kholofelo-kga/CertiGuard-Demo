@@ -153,7 +153,7 @@ const b64 = f => fs.readFileSync(path.join(ROOT, f)).toString("base64");
     const r = await runFlow(p, S5, { shots: "s9_conference" }); const body = await p.textContent("body"); const sel = /Conference \/ event participation/.test(body);
     return { ok: r.cls === "Unsupported" && sel && !/Forged/.test(await p.textContent(".resultHero")), actual: `${r.cls}; type shown as conference=${sel}; fields without data shown as "Not available"=${/Not available/.test(body)}` };
   });
-  await tc("TC-19", "Document types", "Diploma that shows no certificate number", "Number left as Not available (nothing invented); result Suspicious because it cannot be confirmed; no format error", async () => {
+  await tc("TC-19", "Document types", "Diploma that shows no certificate number", "Number left as Not available (nothing invented); result Suspicious (never Forged without a record contradiction) because it cannot be confirmed; no format error", async () => {
     const r = await runFlow(p, S6, { shots: "s10_nonumber" }); const body = await p.textContent("body");
     return { ok: r.cls === "Suspicious" && /not found or not reliably identified/.test(body) && /Not available/.test(body), actual: `${r.cls}, risk ${r.score}/100; "number not found or not reliably identified" factor shown` };
   });
@@ -169,6 +169,17 @@ const b64 = f => fs.readFileSync(path.join(ROOT, f)).toString("base64");
     await p.click("[data-act=reset]"); const r1 = await runFlow(p, S1); const body1 = await p.textContent("body");
     const ok = /Tamper-region CNN flagged \d+ tile/.test(body2) && boxes > 0 && /Tamper-region CNN flagged no region/.test(body1) && !/could not run in this browser/.test(body1 + body2);
     return { ok, actual: `altered: ${r2.cls} risk ${r2.score}, ${boxes} purple box(es); genuine: ${r1.cls} risk ${r1.score}` };
+  });
+  await tc("TC-23", "Reporting", "Download the verification report as a PDF (FR-09)", "A real PDF file is downloaded containing reference, outcome, fields, explanation and evidence image; download is audited", async () => {
+    await open(p, "Verify Certificate"); const r2 = await runFlow(p, S2, { shots: "s12_report" });
+    const [dl] = await Promise.all([p.waitForEvent("download"), p.click("[data-act=pdf]")]); const fp = path.join(OUT, "report_sample2.pdf"); await dl.saveAs(fp);
+    const buf = fs.readFileSync(fp), head = buf.slice(0, 5).toString(), txt = buf.toString("latin1"); const audit = await lsAudit(p); const aud = audit.some(a => a.action === "Report downloaded");
+    const ok = head === "%PDF-" && buf.length > 20000 && /\/Type ?\/Page/.test(txt) && aud; return { ok, actual: `file ${dl.suggestedFilename()}, ${buf.length} bytes, header ${head}, image embedded=${buf.length > 20000}, audited=${aud}` };
+  });
+  await tc("TC-24", "XAI", "Heat-map and text explanation within 2 s of the CNN result (ETR-03 / FR-08)", "CNN heat-map can be shown on the document; explanation + heat-map ready < 2000 ms after the CNN finished", async () => {
+    await p.click("[data-act=reset]"); await runFlow(p, S2); await p.check("[data-act=cnnmap]"); const heat = await p.$$eval("img.heatov", e => e.length); const txt = await p.textContent(".resultHero ~ .grid2"); const m = txt.match(/ready (\d+) ms after the CNN/);
+    const ms = m ? +m[1] : -1; await p.screenshot({ path: path.join(SH, "s13_cnn_heatmap.png"), fullPage: true }); global.__xai = ms;
+    return { ok: heat === 1 && ms >= 0 && ms < 2000 && /purple|Purple|heat-map/.test(txt), actual: `heat-map overlay shown=${heat === 1}; text explanation + heat-map ready ${ms} ms after CNN` };
   });
   await tc("TC-20", "Document types", "Three-page PDF where the certificate is on page 2", "All pages read; name and institution taken from the document, not from sample data", async () => {
     await open(p, "Verify Certificate"); await p.setInputFiles("#file", path.join(ROOT, "tests/eval/multipage_pack.pdf")); await p.waitForSelector(".hash"); await p.click("[data-act=analyse]"); await p.waitForSelector("#f_name", { timeout: 120000 });
@@ -219,6 +230,7 @@ const b64 = f => fs.readFileSync(path.join(ROOT, f)).toString("base64");
     rows: cls
   };
   quant.ela = { meanGenuine: +(g.reduce((a, c) => a + c.ela, 0) / g.length).toFixed(1), meanTampered: +(tm.reduce((a, c) => a + c.ela, 0) / tm.length).toFixed(1), aucTamperedVsGenuine: auc(tm.map(c => c.ela), g.map(c => c.ela)) };
+  quant.xaiMs = global.__xai;
   quant.cnn = { evalN: cls.length, tamperedFlagged: tm.filter(c => c.cnnFlag).length, tamperedN: tm.length, genuineFlagged: g.filter(c => c.cnnFlag).length, genuineN: g.length, auc: auc(tm.map(c => c.cnn), g.map(c => c.cnn)), medianMs: cls.map(c => c.cnnMs).sort((x, y) => x - y)[Math.floor(cls.length / 2)], heldOut: JSON.parse(fs.readFileSync(path.join(ROOT, "ml/results.json"))) };
   console.log("CNN", JSON.stringify({ ...quant.cnn, heldOut: undefined }));
   console.log("CLASSIFICATION", JSON.stringify({ ...quant.classification, rows: undefined }), "ELA", JSON.stringify(quant.ela));

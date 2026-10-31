@@ -9,16 +9,16 @@ class Net(nn.Module):
         s.f = nn.Sequential(blk(1, 16), blk(16, 32), blk(32, 48), blk(48, 64)); s.h = nn.Linear(64, 1)
     def forward(s, x): x = (x - 0.5) * 4; return s.h(s.f(x).mean((2, 3))).squeeze(1)   # logit
 if __name__ == "__main__":
-    d = np.load("ml/train_tiles.npz"); X = torch.tensor(d["X"]).float().div(255).unsqueeze(1); Y = torch.tensor(d["Y"]).float()
+    d = np.load("ml/train_tiles.npz"); X = torch.from_numpy(d["X"]).float().div(255).unsqueeze(1); Y = torch.tensor(d["Y"]).float()
     print("train tiles", len(Y), "positives", int(Y.sum().item()))
     net = Net(); opt = torch.optim.AdamW(net.parameters(), 2e-3, weight_decay=1e-4); EP = 6
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, 4e-3, total_steps=EP * (len(Y) // 128 + 1))
     lossf = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(float((Y == 0).sum() / Y.sum()) ** 0.5))
     val = np.load("ml/val_images.npz", allow_pickle=True)
     def score_images(npz):
-        t = torch.tensor(npz["tiles"]).float().div(255); n, k = t.shape[:2]; net.eval(); out = []
+        t = npz["tiles"]; n = t.shape[0]; net.eval(); out = []
         with torch.no_grad():
-            for i in range(n): out.append(torch.sigmoid(net(t[i].unsqueeze(1))).numpy())
+            for i in range(n): out.append(torch.sigmoid(net(torch.from_numpy(t[i]).float().div(255).unsqueeze(1))).numpy())
         P = np.stack(out); top = np.sort(P, 1)[:, -3:].mean(1); return P, top
     best = (-1, None)
     for ep in range(EP):
@@ -31,8 +31,11 @@ if __name__ == "__main__":
         print(f"epoch {ep+1}/{EP} loss {tl/len(Y):.4f} val image AUC {auc:.3f} ({time.time()-t0:.0f}s)", flush=True)
         if auc > best[0]: best = (auc, {k: v.clone() for k, v in net.state_dict().items()})
     net.load_state_dict(best[1]); torch.save(net.state_dict(), "ml/tamper_cnn.pt")
-    # threshold from VALIDATION only: lowest threshold with <=5% false positives on genuine + benign images
-    P, top = score_images(val); neg = top[val["img_label"] == 0]; thr = float(np.quantile(neg, 0.95)); print("threshold", thr)
+    # threshold from VALIDATION only: the value that maximises F1 on the validation images
+    P, top = score_images(val); neg = top[val["img_label"] == 0]; yv = val["img_label"]; cands = np.unique(np.round(top, 4)); f1s = []
+    for c in cands:
+        pr = (top >= c).astype(int); tp = ((pr == 1) & (yv == 1)).sum(); fp = ((pr == 1) & (yv == 0)).sum(); fn = ((pr == 0) & (yv == 1)).sum(); f1s.append(2 * tp / max(1, 2 * tp + fp + fn))
+    thr = float(cands[int(np.argmax(f1s))]); print("threshold (max validation F1)", thr)
     # ---- held-out test ----
     te = np.load("ml/test_images.npz", allow_pickle=True); Pt, topt = score_images(te); y = te["img_label"]; tag = te["tag"]
     pred = (topt >= thr).astype(int); p, r, f1, _ = precision_recall_fscore_support(y, pred, average="binary", zero_division=0)

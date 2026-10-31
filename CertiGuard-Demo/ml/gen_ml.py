@@ -27,7 +27,17 @@ def base(c, r):
     centre(dr, 450, "has been awarded the", F(sf, j(30)), ink); centre(dr, 510, c["qual"], F(sb, j(40)), ink)
     dr.text((130, 700), "Certificate No: " + c["num"], font=F("DejaVuSans.ttf", 30), fill=ink); dr.text((130, 760), "Date of issue: " + c["date"], font=F("DejaVuSans.ttf", 30), fill=ink)
     dr.ellipse([1020, 640, 1180, 800], outline=(150, 20, 20), width=5)
+    logo(dr, r, col); scribble(dr, r)
     return img, paper
+def logo(dr, r, col):
+    k = r.randint(0, 2); x0, y0 = 75, 70
+    if k == 0: dr.ellipse([x0, y0, x0 + 130, y0 + 130], outline=col, width=8); dr.polygon([(x0 + 65, y0 + 25), (x0 + 105, y0 + 100), (x0 + 25, y0 + 100)], fill=col)
+    elif k == 1: dr.rectangle([x0, y0, x0 + 130, y0 + 130], outline=col, width=8); dr.line([x0, y0, x0 + 130, y0 + 130], fill=col, width=8)
+    else: dr.pieslice([x0, y0, x0 + 130, y0 + 130], 30, 300, fill=col)
+def scribble(dr, r):
+    x = 960; pts = []
+    for i in range(14): pts.append((x + i * 22 + r.randint(-4, 4), 800 + r.randint(-26, 26)))
+    dr.line(pts, fill=(20, 20, 90), width=3)
 def noisy(img, sig, r):
     a = np.asarray(img).astype(np.float32) + np.random.normal(0, sig, (img.height, img.width, 3)); return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
 def make_doc(args):
@@ -35,28 +45,36 @@ def make_doc(args):
     d = dict(inst=inst, name=person(r), qual=r.choice(QUAL), num="%s-%d-%05d" % ("".join(w[0] for w in inst.split() if w[0].isupper())[:4], r.randint(2022, 2026), r.randint(1000, 99999)), date="%d %s %d" % (r.randint(1, 28), r.choice(MON), r.randint(2022, 2026)))
     sig = r.uniform(1.0, 5.0); img, paper = base(d, r); img = noisy(img, sig, r); q1 = r.randint(70, 92); gen = jpeg(img, q1)
     # tampering: edit the decoded JPEG, save again (different compression history); boxes list the edited areas
-    kind = r.choice(["text_name", "text_date", "text_qual", "copy_paste", "local_blur"]); t = gen.copy(); dr = ImageDraw.Draw(t); boxes = []
+    kind = r.choice(["text_name", "text_date", "text_qual", "copy_paste", "local_blur", "logo_edit", "signature_edit", "seal_edit"]); t = gen.copy(); dr = ImageDraw.Draw(t); boxes = []
     ink = (25, 25, 25); fillpaper = tuple(int(v) for v in np.asarray(gen.crop((60, 880, 160, 920))).reshape(-1, 3).mean(0))
     if kind == "text_name": b = [200, 335, W - 200, 420]; dr.rectangle(b, fill=fillpaper); centre(dr, 345, person(r), F("DejaVuSerif-Bold.ttf", 56), ink)
     elif kind == "text_date": b = [125, 755, 760, 805]; dr.rectangle(b, fill=fillpaper); dr.text((130, 760), "Date of issue: %d %s %d" % (r.randint(1, 28), r.choice(MON), r.randint(2018, 2025)), font=F("DejaVuSans.ttf", 30), fill=ink)
     elif kind == "text_qual": b = [150, 500, W - 150, 570]; dr.rectangle(b, fill=fillpaper); centre(dr, 510, r.choice(QUAL), F("DejaVuSerif-Bold.ttf", 40), ink)
     elif kind == "copy_paste":
         b = [200, 335, W - 200, 420]; src = gen.crop((200, 500, W - 200, 585)); t.paste(src, (200, 335))
+    elif kind == "logo_edit":
+        b = [60, 55, 225, 215]; dr.rectangle(b, fill=fillpaper); logo(dr, r, (r.randint(10, 120), r.randint(20, 120), r.randint(40, 140)))
+    elif kind == "signature_edit":
+        b = [940, 760, 1280, 845]; dr.rectangle(b, fill=fillpaper); scribble(dr, r)
+    elif kind == "seal_edit":
+        b = [1005, 625, 1195, 815]; dr.rectangle(b, fill=fillpaper); dr.ellipse([1020, 640, 1180, 800], outline=(150, 20, 20), width=5); dr.text((1062, 700), "SEAL", font=F("DejaVuSans-Bold.ttf", 28), fill=(150, 20, 20))
     else:
         b = [130, 690, 760, 800]; reg = t.crop(tuple(b)).filter(ImageFilter.GaussianBlur(r.uniform(1.2, 2.2))); t.paste(reg, (130, 690))
-    if kind.startswith("text") and r.random() < 0.5:   # attacker adds matching scanner noise to the edited box
+    if kind.startswith(("text", "logo", "signature", "seal")) and r.random() < 0.5:   # attacker adds matching scanner noise to the edited box
         reg = noisy(t.crop(tuple(b)), sig, r); t.paste(reg, (b[0], b[1]))
     boxes.append(b); forged = jpeg(t, r.randint(75, 95))
-    # benign processing of the genuine scan (must NOT be flagged)
-    g2 = gen
-    op = r.choice(["resave", "resize", "blur", "bright", "rotate"])
-    if op == "resave": g2 = jpeg(gen, r.randint(60, 90))
-    elif op == "resize": s = r.uniform(0.7, 0.95); g2 = jpeg(gen.resize((int(W * s), int(H * s)), Image.LANCZOS), r.randint(70, 90))
-    elif op == "blur": g2 = jpeg(gen.filter(ImageFilter.GaussianBlur(r.uniform(0.5, 1.0))), r.randint(70, 90))
-    elif op == "bright": g2 = jpeg(ImageEnhance.Contrast(ImageEnhance.Brightness(gen).enhance(r.uniform(0.85, 1.1))).enhance(r.uniform(0.85, 1.1)), r.randint(70, 90))
-    else: g2 = jpeg(gen.rotate(r.uniform(-1.2, 1.2), resample=Image.BICUBIC, fillcolor=paper), r.randint(70, 90))
+    def process(im, op):
+        if op == "resave": return jpeg(im, r.randint(60, 90))
+        if op == "resize": s = r.uniform(0.7, 0.95); return jpeg(im.resize((int(W * s), int(H * s)), Image.LANCZOS), r.randint(70, 90))
+        if op == "blur": return jpeg(im.filter(ImageFilter.GaussianBlur(r.uniform(0.5, 1.0))), r.randint(70, 90))
+        if op == "bright": return jpeg(ImageEnhance.Contrast(ImageEnhance.Brightness(im).enhance(r.uniform(0.85, 1.1))).enhance(r.uniform(0.85, 1.1)), r.randint(70, 90))
+        return jpeg(im.rotate(r.uniform(-1.2, 1.2), resample=Image.BICUBIC, fillcolor=paper), r.randint(70, 90))
+    ops = ["resave", "resize", "blur", "bright", "rotate"]; op1, op2 = r.sample(ops, 2)
+    items = [(0, gen, [], "genuine"), (1, forged, boxes, kind), (0, process(gen, op1), [], "benign_" + op1), (0, process(gen, op2), [], "benign_" + op2)]
+    if r.random() < 0.5:   # forged page then scanned again / resized: the edit is still there
+        fop = r.choice(["resave", "resize", "blur", "bright"]); items.append((1, process(forged, fop), boxes, kind))
     out = []
-    for lab, im, bx, tag in [(0, gen, [], "genuine"), (1, forged, boxes, kind), (0, g2, [], "benign_" + op)]:
+    for lab, im, bx, tag in items:
         im = im.convert("L").resize((W, H), Image.BILINEAR) if im.size != (W, H) else im.convert("L"); a = np.asarray(im, dtype=np.uint8)
         tiles, labs = [], []
         for y in range(0, H - T + 1, T):
@@ -64,7 +82,12 @@ def make_doc(args):
                 ov = 0
                 for b in bx: ox = max(0, min(x + T, b[2]) - max(x, b[0])); oy = max(0, min(y + T, b[3]) - max(y, b[1])); ov = max(ov, ox * oy / (T * T))
                 tiles.append(a[y:y + T, x:x + T]); labs.append(1 if ov >= 0.25 else 0)
-        out.append(dict(img_label=lab, tag=tag, tiles=np.stack(tiles), tlabels=np.array(labs, dtype=np.uint8)))
+        tl = np.array(labs, dtype=np.uint8); tt = np.stack(tiles)
+        if split == "train":   # keep memory small: sample tiles inside the worker (all positives + 2x random negatives)
+            pos = np.where(tl == 1)[0]; neg = np.where(tl == 0)[0]; rs = np.random.RandomState(seed % 100000)
+            kn = rs.choice(neg, size=min(len(neg), max(20, 2 * len(pos))), replace=False); idx = np.r_[pos, kn].astype(int)
+            out.append(dict(X=tt[idx], Y=tl[idx]))
+        else: out.append(dict(img_label=lab, tag=tag, tiles=tt, tlabels=tl))
     return split, seed, out
 if __name__ == "__main__":
     N = int(sys.argv[1]) if len(sys.argv) > 1 else 600
@@ -82,13 +105,8 @@ if __name__ == "__main__":
     rng = np.random.RandomState(0)
     for s in store:
         if s == "train":   # tile-level training set: all positives, random negatives (3 per positive), taken from genuine/benign/forged images
-            X, Y = [], []
-            for out in store[s]:
-                for im in out:
-                    pos = np.where(im["tlabels"] == 1)[0]; neg = np.where(im["tlabels"] == 0)[0]
-                    keep_neg = rng.choice(neg, size=min(len(neg), max(30, 3 * len(pos))), replace=False)
-                    for i in list(pos) + list(keep_neg): X.append(im["tiles"][i]); Y.append(im["tlabels"][i])
-            np.savez_compressed("ml/train_tiles.npz", X=np.stack(X), Y=np.array(Y)); print("train tiles", len(X), "positives", int(sum(Y)))
+            X = np.concatenate([im["X"] for out in store[s] for im in out]); Y = np.concatenate([im["Y"] for out in store[s] for im in out])
+            np.savez_compressed("ml/train_tiles.npz", X=X, Y=Y); print("train tiles", len(Y), "positives", int(Y.astype(int).sum()))
         else:
             tiles = np.stack([im["tiles"] for out in store[s] for im in out]); lab = np.array([im["img_label"] for out in store[s] for im in out]); tl = np.stack([im["tlabels"] for out in store[s] for im in out]); tag = np.array([im["tag"] for out in store[s] for im in out])
             np.savez_compressed(f"ml/{s}_images.npz", tiles=tiles, img_label=lab, tlabels=tl, tag=tag); print(s, tiles.shape, lab.mean())

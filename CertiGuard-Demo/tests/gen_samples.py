@@ -26,7 +26,7 @@ def base(c):
     centre(dr, 345, c["name"], F("DejaVuSerif-Bold.ttf", 56))
     centre(dr, 450, "has been awarded the", F("DejaVuSerif.ttf", 30))
     centre(dr, 510, c["qualification"], F("DejaVuSerif-Bold.ttf", 40))
-    dr.text((130, 700), "Certificate No: " + c["number"], font=F("DejaVuSans.ttf", 30), fill=(25, 25, 25))
+    if c["number"]: dr.text((130, 700), "Certificate No: " + c["number"], font=F("DejaVuSans.ttf", 30), fill=(25, 25, 25))
     dr.text((130, 760), "Date of issue: " + long_date(c["date"]), font=F("DejaVuSans.ttf", 30), fill=(25, 25, 25))
     dr.line([950, 830, 1250, 830], fill=(25, 25, 25), width=2); dr.text((1010, 840), "Registrar", font=F("DejaVuSans.ttf", 24), fill=(60, 60, 60))
     dr.ellipse([1020, 640, 1180, 800], outline=(150, 20, 20), width=5); dr.ellipse([1034, 654, 1166, 786], outline=(150, 20, 20), width=2)
@@ -123,8 +123,7 @@ jpeg(conference_cert(), 85).save("samples/sample-5-conference-participation.jpg"
 
 def diploma_no_number():
     c = dict(number="", name="Busisiwe Nkosi", qualification="National Diploma in Nursing", institution="Eastern Cape Polytechnic", date="2025-11-21")
-    img = base(dict(c, number="X")); dr = ImageDraw.Draw(img)
-    dr.rectangle([125, 695, 760, 745], fill=PAPER)   # no certificate number is printed on this document
+    img = base(c)   # no certificate number is printed on this document (nothing is painted over)
     arr = np.asarray(img).astype(np.float32) + np.random.normal(0, 1.5, (H, W, 3)); return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
 jpeg(diploma_no_number(), 85).save("samples/sample-6-academic-no-number.jpg", "JPEG", quality=85)
 print("document-type samples written")

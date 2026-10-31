@@ -1,5 +1,5 @@
 {
- "when": "2026-10-31T09:54:45.750Z",
+ "when": "2026-10-31T14:06:29.156Z",
  "base": "http://localhost:8765",
  "tests": [
   {
@@ -150,8 +150,8 @@
    "id": "TC-19",
    "area": "Document types",
    "name": "Diploma that shows no certificate number",
-   "expected": "Number left as Not available (nothing invented); result Suspicious because it cannot be confirmed; no format error",
-   "actual": "Suspicious, risk 45/100; \"number not found or not reliably identified\" factor shown",
+   "expected": "Number left as Not available (nothing invented); result Suspicious (never Forged without a record contradiction) because it cannot be confirmed; no format error",
+   "actual": "Suspicious, risk 75/100; \"number not found or not reliably identified\" factor shown",
    "status": "Pass"
   },
   {
@@ -167,7 +167,23 @@
    "area": "Workflow + AI",
    "name": "Tamper-region CNN runs in the browser and its evidence is shown",
    "expected": "Altered sample: CNN factor and purple edit boxes shown; genuine sample: CNN ran (no error) and flagged nothing",
-   "actual": "altered: Suspicious risk 60, 13 purple box(es); genuine: Genuine risk 0",
+   "actual": "altered: Suspicious risk 60, 8 purple box(es); genuine: Genuine risk 0",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-23",
+   "area": "Reporting",
+   "name": "Download the verification report as a PDF (FR-09)",
+   "expected": "A real PDF file is downloaded containing reference, outcome, fields, explanation and evidence image; download is audited",
+   "actual": "file CertiGuard_Report_CG-2026-B52F48A5.pdf, 83590 bytes, header %PDF-, image embedded=true, audited=true",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-24",
+   "area": "XAI",
+   "name": "Heat-map and text explanation within 2 s of the CNN result (ETR-03 / FR-08)",
+   "expected": "CNN heat-map can be shown on the document; explanation + heat-map ready < 2000 ms after the CNN finished",
+   "actual": "heat-map overlay shown=true; text explanation + heat-map ready 33 ms after CNN",
    "status": "Pass"
   },
   {
@@ -183,23 +199,23 @@
  "quant": {
   "latency": {
    "n": 10,
-   "coldTotalMs": 7284,
+   "coldTotalMs": 8575,
    "warmTotalMs": [
-    5613,
-    5574,
-    5606,
-    5523,
-    5599,
-    5669,
-    5695,
-    5549,
-    5776
+    6730,
+    6690,
+    6785,
+    7202,
+    6638,
+    6827,
+    6669,
+    6756,
+    7173
    ],
-   "warmMedianMs": 5606,
-   "warmP95Ms": 5776,
-   "warmMaxMs": 5776,
-   "warmOcrMedianMs": 980,
-   "warmElaMedianMs": 1068,
+   "warmMedianMs": 6756,
+   "warmP95Ms": 7202,
+   "warmMaxMs": 7202,
+   "warmOcrMedianMs": 1104,
+   "warmElaMedianMs": 1077,
    "under10sPct": 100
   },
   "taskCompletion": {
@@ -293,21 +309,21 @@
      "score": 0,
      "ela": 10,
      "anomalies": 5,
-     "cnn": 0.8989489475886027,
+     "cnn": 0.9157981872558594,
      "cnnFlag": false,
-     "cnnMs": 995
+     "cnnMs": 1146
     },
     {
      "file": "tampered_01.jpg",
      "label": "tampered",
      "seeded": true,
      "cls": "Suspicious",
-     "score": 55,
+     "score": 25,
      "ela": 11,
      "anomalies": 6,
-     "cnn": 0.9749532143274943,
-     "cnnFlag": true,
-     "cnnMs": 1094
+     "cnn": 0.9695235292116801,
+     "cnnFlag": false,
+     "cnnMs": 1115
     },
     {
      "file": "genuine_02.jpg",
@@ -317,9 +333,9 @@
      "score": 0,
      "ela": 14,
      "anomalies": 7,
-     "cnn": 0.777209480603536,
+     "cnn": 0.9393956462542216,
      "cnnFlag": false,
-     "cnnMs": 1102
+     "cnnMs": 1118
     },
     {
      "file": "tampered_02.jpg",
@@ -329,9 +345,9 @@
      "score": 60,
      "ela": 10,
      "anomalies": 5,
-     "cnn": 0.9937324722607931,
+     "cnn": 0.9986348946889242,
      "cnnFlag": true,
-     "cnnMs": 1051
+     "cnnMs": 1079
     },
     {
      "file": "genuine_03.jpg",
@@ -341,9 +357,9 @@
      "score": 0,
      "ela": 12,
      "anomalies": 6,
-     "cnn": 0.9413496454556783,
+     "cnn": 0.9642559091250101,
      "cnnFlag": false,
-     "cnnMs": 1017
+     "cnnMs": 1080
     },
     {
      "file": "tampered_03.jpg",
@@ -353,9 +369,9 @@
      "score": 50,
      "ela": 8,
      "anomalies": 4,
-     "cnn": 0.9945512413978577,
+     "cnn": 0.9887930552164713,
      "cnnFlag": true,
-     "cnnMs": 1069
+     "cnnMs": 1081
     },
     {
      "file": "genuine_04.jpg",
@@ -365,9 +381,9 @@
      "score": 0,
      "ela": 12,
      "anomalies": 6,
-     "cnn": 0.8501882751782736,
+     "cnn": 0.9436591466267904,
      "cnnFlag": false,
-     "cnnMs": 1051
+     "cnnMs": 1110
     },
     {
      "file": "tampered_04.jpg",
@@ -377,9 +393,9 @@
      "score": 55,
      "ela": 8,
      "anomalies": 4,
-     "cnn": 0.97545325756073,
+     "cnn": 0.981786827246348,
      "cnnFlag": true,
-     "cnnMs": 1088
+     "cnnMs": 1103
     },
     {
      "file": "genuine_05.jpg",
@@ -389,9 +405,9 @@
      "score": 0,
      "ela": 12,
      "anomalies": 6,
-     "cnn": 0.8740495045979818,
+     "cnn": 0.9576290051142374,
      "cnnFlag": false,
-     "cnnMs": 1076
+     "cnnMs": 1089
     },
     {
      "file": "tampered_05.jpg",
@@ -401,9 +417,9 @@
      "score": 60,
      "ela": 8,
      "anomalies": 4,
-     "cnn": 0.995308498541514,
+     "cnn": 0.9993194540341696,
      "cnnFlag": true,
-     "cnnMs": 1098
+     "cnnMs": 1173
     },
     {
      "file": "genuine_06.jpg",
@@ -413,21 +429,21 @@
      "score": 45,
      "ela": 10,
      "anomalies": 5,
-     "cnn": 0.7290053566296896,
+     "cnn": 0.8787785172462463,
      "cnnFlag": false,
-     "cnnMs": 1014
+     "cnnMs": 1284
     },
     {
      "file": "tampered_06.jpg",
      "label": "tampered",
      "seeded": false,
-     "cls": "Forged",
+     "cls": "Suspicious",
      "score": 75,
      "ela": 4,
      "anomalies": 2,
-     "cnn": 0.9969816009203593,
+     "cnn": 0.9963755210240682,
      "cnnFlag": true,
-     "cnnMs": 986
+     "cnnMs": 1137
     },
     {
      "file": "genuine_07.jpg",
@@ -437,21 +453,21 @@
      "score": 45,
      "ela": 8,
      "anomalies": 4,
-     "cnn": 0.8673785527547201,
+     "cnn": 0.974165161450704,
      "cnnFlag": false,
-     "cnnMs": 995
+     "cnnMs": 1095
     },
     {
      "file": "tampered_07.jpg",
      "label": "tampered",
      "seeded": false,
-     "cls": "Forged",
-     "score": 75,
+     "cls": "Suspicious",
+     "score": 45,
      "ela": 10,
      "anomalies": 5,
-     "cnn": 0.9712982773780823,
-     "cnnFlag": true,
-     "cnnMs": 1118
+     "cnn": 0.9767259359359741,
+     "cnnFlag": false,
+     "cnnMs": 1175
     },
     {
      "file": "genuine_08.jpg",
@@ -461,21 +477,21 @@
      "score": 45,
      "ela": 10,
      "anomalies": 5,
-     "cnn": 0.7703357537587484,
+     "cnn": 0.944772481918335,
      "cnnFlag": false,
-     "cnnMs": 1025
+     "cnnMs": 1173
     },
     {
      "file": "tampered_08.jpg",
      "label": "tampered",
      "seeded": false,
-     "cls": "Forged",
+     "cls": "Suspicious",
      "score": 75,
      "ela": 10,
      "anomalies": 5,
-     "cnn": 0.9961199561754862,
+     "cnn": 0.998748242855072,
      "cnnFlag": true,
-     "cnnMs": 1021
+     "cnnMs": 1177
     },
     {
      "file": "genuine_09.jpg",
@@ -485,21 +501,21 @@
      "score": 45,
      "ela": 12,
      "anomalies": 6,
-     "cnn": 0.86032106479009,
+     "cnn": 0.956887682278951,
      "cnnFlag": false,
-     "cnnMs": 1042
+     "cnnMs": 1162
     },
     {
      "file": "tampered_09.jpg",
      "label": "tampered",
      "seeded": false,
-     "cls": "Forged",
+     "cls": "Suspicious",
      "score": 75,
      "ela": 10,
      "anomalies": 5,
-     "cnn": 0.9869008262952169,
+     "cnn": 0.9963436524073283,
      "cnnFlag": true,
-     "cnnMs": 1060
+     "cnnMs": 1093
     },
     {
      "file": "genuine_10.jpg",
@@ -509,21 +525,21 @@
      "score": 45,
      "ela": 12,
      "anomalies": 6,
-     "cnn": 0.9110562006632487,
+     "cnn": 0.9407094319661459,
      "cnnFlag": false,
-     "cnnMs": 1184
+     "cnnMs": 1147
     },
     {
      "file": "tampered_10.jpg",
      "label": "tampered",
      "seeded": false,
-     "cls": "Forged",
-     "score": 75,
+     "cls": "Suspicious",
+     "score": 45,
      "ela": 8,
      "anomalies": 4,
-     "cnn": 0.9909128149350485,
-     "cnnFlag": true,
-     "cnnMs": 1077
+     "cnn": 0.9704195459683737,
+     "cnnFlag": false,
+     "cnnMs": 1146
     }
    ]
   },
@@ -532,48 +548,55 @@
    "meanTampered": 8.7,
    "aucTamperedVsGenuine": 0.16
   },
+  "xaiMs": 33,
   "cnn": {
    "evalN": 20,
-   "tamperedFlagged": 10,
+   "tamperedFlagged": 7,
    "tamperedN": 10,
    "genuineFlagged": 0,
    "genuineN": 10,
-   "auc": 1,
-   "medianMs": 1060,
+   "auc": 0.98,
+   "medianMs": 1137,
    "heldOut": {
-    "threshold": 0.9475806355476379,
-    "n_test": 270,
-    "accuracy": 0.937037037037037,
-    "precision": 0.8476190476190476,
-    "recall": 0.9888888888888889,
-    "f1": 0.9128205128205128,
-    "auc": 0.99,
-    "fpr_genuine": 0.022222222222222223,
-    "fpr_benign": 0.15555555555555556,
+    "threshold": 0.9811000227928162,
+    "n_test": 600,
+    "accuracy": 0.9033333333333333,
+    "precision": 0.8663101604278075,
+    "recall": 0.8307692307692308,
+    "f1": 0.8481675392670157,
+    "auc": 0.9530484330484331,
+    "fpr_genuine": 0.044444444444444446,
+    "fpr_benign": 0.07037037037037037,
     "recall_by_type": {
      "copy_paste": 1,
      "local_blur": 1,
-     "text_date": 1,
-     "text_name": 0.9444444444444444,
-     "text_qual": 1
+     "logo_edit": 0.21428571428571427,
+     "seal_edit": 1,
+     "signature_edit": 0.37037037037037035,
+     "text_date": 0.8333333333333334,
+     "text_name": 1,
+     "text_qual": 0.9523809523809523
     },
     "fpr_by_benign": {
-     "benign_blur": 0.09090909090909091,
-     "benign_bright": 0,
-     "benign_resave": 0,
-     "benign_resize": 0.2857142857142857,
-     "benign_rotate": 0.34615384615384615
+     "benign_blur": 0.01694915254237288,
+     "benign_bright": 0.09090909090909091,
+     "benign_resave": 0.046875,
+     "benign_resize": 0.11627906976744186,
+     "benign_rotate": 0.10204081632653061
     },
     "auc_by_type": {
      "copy_paste": 1,
      "local_blur": 1,
-     "text_date": 1,
-     "text_name": 0.9975308641975309,
-     "text_qual": 1
+     "logo_edit": 0.9116402116402116,
+     "seal_edit": 0.9972486772486773,
+     "signature_edit": 0.7791495198902607,
+     "text_date": 0.9712962962962963,
+     "text_name": 0.9991021324354658,
+     "text_qual": 0.9530864197530864
     },
-    "localisation": 1,
+    "localisation": 0.9538461538461539,
     "params": 116369,
-    "train_tiles": 62840
+    "train_tiles": 88962
    }
   }
  }
