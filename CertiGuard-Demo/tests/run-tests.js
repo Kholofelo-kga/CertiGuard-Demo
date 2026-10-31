@@ -164,6 +164,12 @@ const b64 = f => fs.readFileSync(path.join(ROOT, f)).toString("base64");
     const ok = /thabo mokgosi/i.test(v.name) && /advanced diploma/i.test(v.qualification) && /computer science/i.test(v.qualification) && /tshwane university of technology/i.test(v.institution) && v.date === "2024-12-13" && !/219745761|2000/.test(v.number);
     return { ok, actual: JSON.stringify(v) + "; raw OCR text panel present=" + !!(await p.$(".rawocr")) };
   });
+  await tc("TC-22", "Workflow + AI", "Tamper-region CNN runs in the browser and its evidence is shown", "Altered sample: CNN factor and purple edit boxes shown; genuine sample: CNN ran (no error) and flagged nothing", async () => {
+    await open(p, "Verify Certificate"); const r2 = await runFlow(p, S2); const body2 = await p.textContent("body"); const boxes = await p.$$eval(".box.edit", e => e.length);
+    await p.click("[data-act=reset]"); const r1 = await runFlow(p, S1); const body1 = await p.textContent("body");
+    const ok = /Tamper-region CNN flagged \d+ tile/.test(body2) && boxes > 0 && /Tamper-region CNN flagged no region/.test(body1) && !/could not run in this browser/.test(body1 + body2);
+    return { ok, actual: `altered: ${r2.cls} risk ${r2.score}, ${boxes} purple box(es); genuine: ${r1.cls} risk ${r1.score}` };
+  });
   await tc("TC-20", "Document types", "Three-page PDF where the certificate is on page 2", "All pages read; name and institution taken from the document, not from sample data", async () => {
     await open(p, "Verify Certificate"); await p.setInputFiles("#file", path.join(ROOT, "tests/eval/multipage_pack.pdf")); await p.waitForSelector(".hash"); await p.click("[data-act=analyse]"); await p.waitForSelector("#f_name", { timeout: 120000 });
     const v = await p.$$eval("input[data-in]", e => e.map(x => x.value)); const note = await p.textContent(".notice");
@@ -200,8 +206,8 @@ const b64 = f => fs.readFileSync(path.join(ROOT, f)).toString("base64");
   for (const t of evalSet) {
     const r = await p.evaluate(async b => {
       const bin = Uint8Array.from(atob(b), c => c.charCodeAt(0)); const blob = new Blob([bin], { type: "image/jpeg" });
-      const o = await CG.OCR.extract(blob); const e = await CG.ELA.analyse(blob); const xv = CG.Scoring.crossValidate(o.fields); const sc = CG.Scoring.score(xv, { ...e, available: true }, o.confidence);
-      return { cls: sc.classification, score: sc.score, ela: e.score, anomalies: e.anomalyBlocks };
+      const o = await CG.OCR.extract(blob); const e = await CG.ELA.analyse(blob); const xv = CG.Scoring.crossValidate(o.fields); const cn = await CG.Tamper.analyse(blob); const cnn = { available: true, score: cn.score, flagged: cn.flagged, regions: cn.regions }; const sc = CG.Scoring.score(xv, { ...e, available: true }, o.confidence, cnn);
+      return { cls: sc.classification, score: sc.score, ela: e.score, anomalies: e.anomalyBlocks, cnn: cn.score, cnnFlag: cn.flagged, cnnMs: cn.ms };
     }, b64(t.file)); cls.push({ file: path.basename(t.file), label: t.label, seeded: t.seeded, ...r });
   }
   const g = cls.filter(c => c.label === "genuine"), tm = cls.filter(c => c.label === "tampered");
@@ -213,6 +219,8 @@ const b64 = f => fs.readFileSync(path.join(ROOT, f)).toString("base64");
     rows: cls
   };
   quant.ela = { meanGenuine: +(g.reduce((a, c) => a + c.ela, 0) / g.length).toFixed(1), meanTampered: +(tm.reduce((a, c) => a + c.ela, 0) / tm.length).toFixed(1), aucTamperedVsGenuine: auc(tm.map(c => c.ela), g.map(c => c.ela)) };
+  quant.cnn = { evalN: cls.length, tamperedFlagged: tm.filter(c => c.cnnFlag).length, tamperedN: tm.length, genuineFlagged: g.filter(c => c.cnnFlag).length, genuineN: g.length, auc: auc(tm.map(c => c.cnn), g.map(c => c.cnn)), medianMs: cls.map(c => c.cnnMs).sort((x, y) => x - y)[Math.floor(cls.length / 2)], heldOut: JSON.parse(fs.readFileSync(path.join(ROOT, "ml/results.json"))) };
+  console.log("CNN", JSON.stringify({ ...quant.cnn, heldOut: undefined }));
   console.log("CLASSIFICATION", JSON.stringify({ ...quant.classification, rows: undefined }), "ELA", JSON.stringify(quant.ela));
   await p.close(); await browser.close();
 

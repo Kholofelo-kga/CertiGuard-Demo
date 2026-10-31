@@ -1,5 +1,5 @@
 {
- "when": "2026-10-30T22:50:40.870Z",
+ "when": "2026-10-31T09:54:45.750Z",
  "base": "http://localhost:8765",
  "tests": [
   {
@@ -71,7 +71,7 @@
    "area": "Workflow + AI",
    "name": "Certificate with altered student name",
    "expected": "Name field Mismatched; classification not Genuine; evidence box on name",
-   "actual": "Suspicious, risk 30/100, 1 field(s) Mismatched, 1 red evidence box(es)",
+   "actual": "Suspicious, risk 60/100, 1 field(s) Mismatched, 1 red evidence box(es)",
    "status": "Pass"
   },
   {
@@ -163,6 +163,14 @@
    "status": "Pass"
   },
   {
+   "id": "TC-22",
+   "area": "Workflow + AI",
+   "name": "Tamper-region CNN runs in the browser and its evidence is shown",
+   "expected": "Altered sample: CNN factor and purple edit boxes shown; genuine sample: CNN ran (no error) and flagged nothing",
+   "actual": "altered: Suspicious risk 60, 13 purple box(es); genuine: Genuine risk 0",
+   "status": "Pass"
+  },
+  {
    "id": "TC-20",
    "area": "Document types",
    "name": "Three-page PDF where the certificate is on page 2",
@@ -175,23 +183,23 @@
  "quant": {
   "latency": {
    "n": 10,
-   "coldTotalMs": 5686,
+   "coldTotalMs": 7284,
    "warmTotalMs": [
-    4517,
-    4573,
-    4545,
-    4549,
-    5061,
-    4575,
-    4551,
-    4558,
-    4552
+    5613,
+    5574,
+    5606,
+    5523,
+    5599,
+    5669,
+    5695,
+    5549,
+    5776
    ],
-   "warmMedianMs": 4552,
-   "warmP95Ms": 5061,
-   "warmMaxMs": 5061,
-   "warmOcrMedianMs": 1053,
-   "warmElaMedianMs": 1072,
+   "warmMedianMs": 5606,
+   "warmP95Ms": 5776,
+   "warmMaxMs": 5776,
+   "warmOcrMedianMs": 980,
+   "warmElaMedianMs": 1068,
    "under10sPct": 100
   },
   "taskCompletion": {
@@ -284,16 +292,22 @@
      "cls": "Genuine",
      "score": 0,
      "ela": 10,
-     "anomalies": 5
+     "anomalies": 5,
+     "cnn": 0.8989489475886027,
+     "cnnFlag": false,
+     "cnnMs": 995
     },
     {
      "file": "tampered_01.jpg",
      "label": "tampered",
      "seeded": true,
      "cls": "Suspicious",
-     "score": 25,
+     "score": 55,
      "ela": 11,
-     "anomalies": 6
+     "anomalies": 6,
+     "cnn": 0.9749532143274943,
+     "cnnFlag": true,
+     "cnnMs": 1094
     },
     {
      "file": "genuine_02.jpg",
@@ -302,16 +316,22 @@
      "cls": "Genuine",
      "score": 0,
      "ela": 14,
-     "anomalies": 7
+     "anomalies": 7,
+     "cnn": 0.777209480603536,
+     "cnnFlag": false,
+     "cnnMs": 1102
     },
     {
      "file": "tampered_02.jpg",
      "label": "tampered",
      "seeded": true,
      "cls": "Suspicious",
-     "score": 30,
+     "score": 60,
      "ela": 10,
-     "anomalies": 5
+     "anomalies": 5,
+     "cnn": 0.9937324722607931,
+     "cnnFlag": true,
+     "cnnMs": 1051
     },
     {
      "file": "genuine_03.jpg",
@@ -320,16 +340,22 @@
      "cls": "Genuine",
      "score": 0,
      "ela": 12,
-     "anomalies": 6
+     "anomalies": 6,
+     "cnn": 0.9413496454556783,
+     "cnnFlag": false,
+     "cnnMs": 1017
     },
     {
      "file": "tampered_03.jpg",
      "label": "tampered",
      "seeded": true,
      "cls": "Suspicious",
-     "score": 20,
+     "score": 50,
      "ela": 8,
-     "anomalies": 4
+     "anomalies": 4,
+     "cnn": 0.9945512413978577,
+     "cnnFlag": true,
+     "cnnMs": 1069
     },
     {
      "file": "genuine_04.jpg",
@@ -338,16 +364,22 @@
      "cls": "Genuine",
      "score": 0,
      "ela": 12,
-     "anomalies": 6
+     "anomalies": 6,
+     "cnn": 0.8501882751782736,
+     "cnnFlag": false,
+     "cnnMs": 1051
     },
     {
      "file": "tampered_04.jpg",
      "label": "tampered",
      "seeded": true,
      "cls": "Suspicious",
-     "score": 25,
+     "score": 55,
      "ela": 8,
-     "anomalies": 4
+     "anomalies": 4,
+     "cnn": 0.97545325756073,
+     "cnnFlag": true,
+     "cnnMs": 1088
     },
     {
      "file": "genuine_05.jpg",
@@ -356,16 +388,22 @@
      "cls": "Genuine",
      "score": 0,
      "ela": 12,
-     "anomalies": 6
+     "anomalies": 6,
+     "cnn": 0.8740495045979818,
+     "cnnFlag": false,
+     "cnnMs": 1076
     },
     {
      "file": "tampered_05.jpg",
      "label": "tampered",
      "seeded": true,
      "cls": "Suspicious",
-     "score": 30,
+     "score": 60,
      "ela": 8,
-     "anomalies": 4
+     "anomalies": 4,
+     "cnn": 0.995308498541514,
+     "cnnFlag": true,
+     "cnnMs": 1098
     },
     {
      "file": "genuine_06.jpg",
@@ -374,16 +412,22 @@
      "cls": "Suspicious",
      "score": 45,
      "ela": 10,
-     "anomalies": 5
+     "anomalies": 5,
+     "cnn": 0.7290053566296896,
+     "cnnFlag": false,
+     "cnnMs": 1014
     },
     {
      "file": "tampered_06.jpg",
      "label": "tampered",
      "seeded": false,
-     "cls": "Suspicious",
-     "score": 45,
+     "cls": "Forged",
+     "score": 75,
      "ela": 4,
-     "anomalies": 2
+     "anomalies": 2,
+     "cnn": 0.9969816009203593,
+     "cnnFlag": true,
+     "cnnMs": 986
     },
     {
      "file": "genuine_07.jpg",
@@ -392,16 +436,22 @@
      "cls": "Suspicious",
      "score": 45,
      "ela": 8,
-     "anomalies": 4
+     "anomalies": 4,
+     "cnn": 0.8673785527547201,
+     "cnnFlag": false,
+     "cnnMs": 995
     },
     {
      "file": "tampered_07.jpg",
      "label": "tampered",
      "seeded": false,
-     "cls": "Suspicious",
-     "score": 45,
+     "cls": "Forged",
+     "score": 75,
      "ela": 10,
-     "anomalies": 5
+     "anomalies": 5,
+     "cnn": 0.9712982773780823,
+     "cnnFlag": true,
+     "cnnMs": 1118
     },
     {
      "file": "genuine_08.jpg",
@@ -410,16 +460,22 @@
      "cls": "Suspicious",
      "score": 45,
      "ela": 10,
-     "anomalies": 5
+     "anomalies": 5,
+     "cnn": 0.7703357537587484,
+     "cnnFlag": false,
+     "cnnMs": 1025
     },
     {
      "file": "tampered_08.jpg",
      "label": "tampered",
      "seeded": false,
-     "cls": "Suspicious",
-     "score": 45,
+     "cls": "Forged",
+     "score": 75,
      "ela": 10,
-     "anomalies": 5
+     "anomalies": 5,
+     "cnn": 0.9961199561754862,
+     "cnnFlag": true,
+     "cnnMs": 1021
     },
     {
      "file": "genuine_09.jpg",
@@ -428,16 +484,22 @@
      "cls": "Suspicious",
      "score": 45,
      "ela": 12,
-     "anomalies": 6
+     "anomalies": 6,
+     "cnn": 0.86032106479009,
+     "cnnFlag": false,
+     "cnnMs": 1042
     },
     {
      "file": "tampered_09.jpg",
      "label": "tampered",
      "seeded": false,
-     "cls": "Suspicious",
-     "score": 45,
+     "cls": "Forged",
+     "score": 75,
      "ela": 10,
-     "anomalies": 5
+     "anomalies": 5,
+     "cnn": 0.9869008262952169,
+     "cnnFlag": true,
+     "cnnMs": 1060
     },
     {
      "file": "genuine_10.jpg",
@@ -446,16 +508,22 @@
      "cls": "Suspicious",
      "score": 45,
      "ela": 12,
-     "anomalies": 6
+     "anomalies": 6,
+     "cnn": 0.9110562006632487,
+     "cnnFlag": false,
+     "cnnMs": 1184
     },
     {
      "file": "tampered_10.jpg",
      "label": "tampered",
      "seeded": false,
-     "cls": "Suspicious",
-     "score": 45,
+     "cls": "Forged",
+     "score": 75,
      "ela": 8,
-     "anomalies": 4
+     "anomalies": 4,
+     "cnn": 0.9909128149350485,
+     "cnnFlag": true,
+     "cnnMs": 1077
     }
    ]
   },
@@ -463,6 +531,50 @@
    "meanGenuine": 11.2,
    "meanTampered": 8.7,
    "aucTamperedVsGenuine": 0.16
+  },
+  "cnn": {
+   "evalN": 20,
+   "tamperedFlagged": 10,
+   "tamperedN": 10,
+   "genuineFlagged": 0,
+   "genuineN": 10,
+   "auc": 1,
+   "medianMs": 1060,
+   "heldOut": {
+    "threshold": 0.9475806355476379,
+    "n_test": 270,
+    "accuracy": 0.937037037037037,
+    "precision": 0.8476190476190476,
+    "recall": 0.9888888888888889,
+    "f1": 0.9128205128205128,
+    "auc": 0.99,
+    "fpr_genuine": 0.022222222222222223,
+    "fpr_benign": 0.15555555555555556,
+    "recall_by_type": {
+     "copy_paste": 1,
+     "local_blur": 1,
+     "text_date": 1,
+     "text_name": 0.9444444444444444,
+     "text_qual": 1
+    },
+    "fpr_by_benign": {
+     "benign_blur": 0.09090909090909091,
+     "benign_bright": 0,
+     "benign_resave": 0,
+     "benign_resize": 0.2857142857142857,
+     "benign_rotate": 0.34615384615384615
+    },
+    "auc_by_type": {
+     "copy_paste": 1,
+     "local_blur": 1,
+     "text_date": 1,
+     "text_name": 0.9975308641975309,
+     "text_qual": 1
+    },
+    "localisation": 1,
+    "params": 116369,
+    "train_tiles": 62840
+   }
   }
  }
 }

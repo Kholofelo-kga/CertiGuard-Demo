@@ -2,7 +2,7 @@
    All user-supplied or OCR-derived text is escaped (esc) before it is placed in the page. */
 (function () {
   "use strict";
-  const { Store, Auth, OCR, ELA, Scoring } = CG;
+  const { Store, Auth, OCR, ELA, Tamper, Scoring } = CG;
   const $ = s => document.querySelector(s);
   const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const MAX = 10 * 1024 * 1024;
@@ -119,7 +119,7 @@
     ${S.docType !== "academic" ? `<div class="notice">CertiGuard verifies <b>academic qualification</b> certificates only. This document will be reported as <b>Unsupported</b>, not as genuine or forged.</div>` : ""}${field("Student name", "name", f.name)}${field("Certificate number", "number", f.number)}${field("Qualification", "qualification", f.qualification)}${field("Institution", "institution", f.institution)}${field("Issue date (YYYY-MM-DD)", "date", f.date)}${S.errs._chk ? `<div class="err" role="alert">${esc(S.errs._chk)}</div>` : ""}${uncertain().length ? `<label class="chkrow"><input type="checkbox" id="chk" data-in="chk"> I have checked the fields marked “check” against the document.</label>` : ""}<details class="rawocr"><summary>Original OCR text (what the system actually read)</summary><pre>${esc(o.text)}</pre>${o.meta.identifiers.length ? `<p class="sub">Other identifiers found but <b>not</b> assigned to any field: ${esc(o.meta.identifiers.join(", "))}</p>` : ""}</details><button class="primary wide" data-act="confirm" style="margin-top:16px">Confirm Fields & Run Verification →</button></div></div>`, "verify");
   }
   function analysingView() {
-    const st = ["Cross-validation", "Integrity (ELA)", "Risk scoring", "Explanation & audit"];
+    const st = ["Cross-validation", "Integrity (ELA + CNN)", "Risk scoring", "Explanation & audit"];
     return layout(`<h1>Verification analysis</h1>${steps(3)}<div class="panel"><h2>Running evidence pipeline…</h2><div class="pipeline">${st.map((x, i) => `<div class="stage ${i < S.stage ? "done" : i === S.stage ? "run" : "wait"}">${esc(x)}${i < S.stage ? " ✓" : ""}</div>`).join("→")}</div></div>`, "verify");
   }
   function prov(r) {
@@ -130,6 +130,10 @@
     const r = S.res, img = S.prep;
     return layout(`<h1>Verify Certificate</h1>${steps(4)}<div class="resultHero unsupported"><div><div class="eyebrow" style="color:white">VERIFICATION OUTCOME</div><h1>Unsupported document</h1><div>${esc(OCR.TYPES[r.docType])}</div></div></div><div class="grid2"><div class="panel"><h2>What was read from the document</h2><table class="table">${Object.keys(Scoring.LABEL).map(k => `<tr><td>${esc(Scoring.LABEL[k])}</td><td>${esc(r.fields[k] || "Not available")}</td></tr>`).join("")}</table><p>${esc(r.explanation)}</p><div class="actions"><button class="primary" data-act="print">▧ Print / Save Report</button><button class="secondary" data-act="reset">Verify Another</button></div></div><div class="panel"><h2>Document</h2><div class="ovl"><img src="${esc(img.url)}" alt="Uploaded document"></div><p class="sub mono">Reference ${esc(r.id)}<br>SHA-256: ${esc(r.hash)}<br>OCR ${esc(r.ocrMs)} ms · total ${esc(r.totalMs)} ms</p></div></div>`, "verify");
   }
+  function cnnPanel(r) {
+    const c = r.cnn; if (!c || !c.available) return `<p class="sub">Tamper-region CNN: ${c && c.error ? "could not run in this browser; no CNN evidence." : "not applied to PDF files."}</p>`;
+    return `<p class="sub"><b>Tamper-region CNN:</b> score ${esc(c.score.toFixed(2))} (flag threshold ${esc(Tamper.CFG.thr.toFixed(2))}) in ${esc(c.ms)} ms. ${c.flagged ? "<b>" + esc(c.regions.length) + " tile(s) look edited</b> (purple boxes). This is a trained model for synthetic edits; it is decision support and not proof." : "No region was flagged. This does not prove the document is unedited."}</p>`;
+  }
   function resultView() {
     if (S.res.classification === "Unsupported") return unsupportedView();
     const r = S.res, cls = r.finalClass || r.classification;
@@ -139,13 +143,15 @@
       const st = r.xv.fields[k].status, cl = st === "Matched" ? "good" : st === "Mismatched" ? "bad" : "warn", b = { x0: l.bbox.x0 - 8, y0: l.bbox.y0 - 8, x1: l.bbox.x1 + 8, y1: l.bbox.y1 + 8 };
       return `<div class="box ${cl}" title="${esc(Scoring.LABEL[k])}: ${esc(r.xv.fields[k].status)}" style="left:${b.x0 / img.w * 100}%;top:${b.y0 / img.h * 100}%;width:${(b.x1 - b.x0) / img.w * 100}%;height:${(b.y1 - b.y0) / img.h * 100}%"></div>`;
     }).join("");
+    const cnnBoxes = r.cnn && r.cnn.available && r.cnn.flagged ? r.cnn.regions.map(g => `<div class="box edit" title="Suspected edit region (CNN ${esc(g.p.toFixed(2))})" style="left:${g.x * 100}%;top:${g.y * 100}%;width:${g.w * 100}%;height:${g.h * 100}%"></div>`).join("") : "";
     const max = Math.max(1, ...r.factors.map(f => f.points));
     return layout(`<h1>Verify Certificate</h1>${steps(4)}<div class="resultHero ${esc(cls.toLowerCase())}"><div><div class="eyebrow" style="color:white">VERIFICATION OUTCOME${r.finalClass ? " (ADMINISTRATOR DECISION)" : ""}</div><h1>${esc(cls)}</h1><div>${esc(r.fields.number)} · ${esc(r.fields.name)}</div></div><div class="risk">${esc(r.score)}<small style="font-size:9px">RISK / 100</small></div></div>
     <div class="notice" role="note"><b>How to read this.</b> ${esc(prov(r))} The score is a rule-based <b>review priority</b>, not a probability of fraud; Suspicious and Forged results need human review.</div>
     <div class="grid2"><div class="panel"><div class="eyebrow">CROSS-VALIDATION</div><h2>Field-by-field evidence</h2><table class="table"><tr><th>Field</th><th>Extracted</th><th>Institution record</th><th>Status</th></tr>${Object.keys(r.xv.fields).map(k => `<tr><td>${esc(Scoring.LABEL[k])}</td><td>${esc(r.fields[k] || "Not available")}</td><td>${esc(r.xv.fields[k].expected)}</td><td class="st-${esc(r.xv.fields[k].status.replace(" ", ""))}">${esc(r.xv.fields[k].status)}</td></tr>`).join("")}</table>
     <h3>Why this result?</h3><p>${esc(r.explanation)}</p>${r.factors.map(f => `<div class="bar"><div>${esc(f.text)}<i style="width:${f.points / max * 100}%;margin-top:4px;${f.points ? "" : "background:#9aa7bb"}"></i></div><b>+${esc(f.points)}</b></div>`).join("")}
     <div class="actions"><button class="primary" data-act="print">▧ Print / Save Report</button>${Auth.can("override") && cls !== "Genuine" && !r.finalClass ? `<button class="secondary" data-act="go" data-v="override">Administrator Override</button>` : ""}<button class="secondary" data-act="reset">Verify Another</button></div></div>
-    <div class="panel"><div class="eyebrow">EXPLAINABLE EVIDENCE</div><h2>Where the evidence is</h2><p class="sub">Green = matches the record; red = differs from the record; amber = could not be compared (no record, or value missing). Boxes mark where OCR read each value, they are <b>not</b> proof of tampering.</p><div class="ovl"><img src="${esc(img.url)}" alt="Certificate with evidence boxes">${boxes}</div>
+    <div class="panel"><div class="eyebrow">EXPLAINABLE EVIDENCE</div><h2>Where the evidence is</h2><p class="sub">Green = matches the record; red = differs from the record; amber = could not be compared (no record, or value missing). Boxes mark where OCR read each value, they are <b>not</b> proof of tampering. Purple = region the CNN considers possibly edited.</p><div class="ovl"><img src="${esc(img.url)}" alt="Certificate with evidence boxes">${boxes}${cnnBoxes}</div>
+    ${cnnPanel(r)}
     ${r.tamper.available ? `<div class="toggle"><label><input type="checkbox" data-act="ela" ${S.showEla ? "checked" : ""}>Show experimental ELA heat-map (advisory only)</label></div>${S.showEla ? `<div class="ovl"><img src="${esc(r.heatUrl)}" alt="Error level analysis heat-map"></div><p class="sub">ELA found ${esc(r.tamper.anomalyBlocks)} clustered anomalous block(s) of ${esc(r.tamper.contentBlocks)} content blocks. This heuristic is not a trained model and has low weight in the score.</p>` : ""}` : `<p class="sub">Integrity (ELA) analysis is not applied to PDF files.</p>`}
     <hr><h3>Verification reference</h3><b class="mono">${esc(r.id)}</b><p class="sub mono">File: ${esc(r.file)}<br>SHA-256: ${esc(r.hash)}<br>OCR ${esc(r.ocrMs)} ms · ELA ${esc(r.elaMs)} ms · total ${esc(r.totalMs)} ms<br>Checked: ${esc(new Date(r.ts).toLocaleString())} by ${esc(r.user)}</p></div></div>`, "verify");
   }
@@ -168,7 +174,8 @@
       ["Field parsing and validation", "REAL", "Rule-based parser plus input validation; fields are editable before verification."],
       ["Institution cross-validation", "REAL, SAMPLE DATA", "Per-field comparison with stored records. The seeded records are fictional, so a match is not authoritative institutional verification."],
       ["Fraud-risk score and explanation", "REAL", "Transparent additive rule model; a rule-based review priority, not a calibrated probability of fraud. Weights are not statistically validated."],
-      ["Integrity analysis (ELA)", "REAL, EXPERIMENTAL, NOT SCORED", "Classical error-level analysis with a heat-map. Evaluation showed it does not separate edited from genuine scans, so its weight is 0. The trained ResNet-50 CNN of the final design is future work."],
+      ["Integrity analysis (ELA)", "REAL, EXPERIMENTAL, NOT SCORED", "Classical error-level analysis with a heat-map. Evaluation showed it does not separate edited from genuine scans, so its weight is 0."],
+      ["Tamper-region CNN", "REAL, TRAINED ON SYNTHETIC DATA ONLY", "A 116k-parameter convolutional network trained from scratch (not the planned ResNet-50), exported to ONNX and run in the browser with onnxruntime-web. It scores 64x64 tiles for local edits (text replacement, copy-paste, blur). Held-out synthetic test: see ml/results.json. It has not been tested on real certificates and gives false alarms after resizing or rotating a scan, so a flag means review, not proof."],
       ["Persistence and audit log", "SIMPLIFIED", "Browser localStorage, not PostgreSQL. The hash chain detects edits to single entries, but anyone who controls the browser storage could rewrite and re-hash the whole history; a server-side append-only log is needed."],
       ["Authentication / roles", "SIMPLIFIED", "Client-side PBKDF2 check and role permissions. A determined user can bypass client-side checks; production needs a server (FastAPI + JWT)."],
       ["XAI", "SIMPLIFIED", "Evidence boxes from OCR positions and the factor breakdown. Grad-CAM/SHAP require the trained CNN (future work)."]
@@ -238,10 +245,12 @@
       const xv = Scoring.crossValidate(f); S.stage = 1; render(); await new Promise(r => setTimeout(r, 30));
       let tamper = { available: false, score: 0 }, heatUrl = "", elaMs = 0;
       if (!S.prep.pdf) { const t = await ELA.analyse(S.prep.blob); elaMs = t.ms; tamper = { ...t, available: true }; heatUrl = await new Promise(r => t.heatmap.toBlob(b => r(URL.createObjectURL(b)), "image/png")); }
+      let cnn = { available: false };
+      if (!S.prep.pdf) { try { const c = await Tamper.analyse(S.prep.blob); cnn = { available: true, score: c.score, flagged: c.flagged, ms: c.ms, regions: c.regions.slice(0, 80) }; } catch (e) { console.error(e); cnn = { available: false, error: true }; } }
       S.stage = 2; render(); await new Promise(r => setTimeout(r, 30));
-      const sc = Scoring.score(xv, tamper, S.ocr.confidence); S.stage = 3; render();
+      const sc = Scoring.score(xv, tamper, S.ocr.confidence, cnn); S.stage = 3; render();
       const id = "CG-" + new Date().getFullYear() + "-" + S.info.hash.slice(0, 8).toUpperCase();
-      const rec = { id, ts: new Date().toISOString(), user: user().email, file: S.info.name, hash: S.info.hash, fields: f, corrected: S.corrected, xv: { found: xv.found, fields: xv.fields }, tamper: { available: tamper.available, score: tamper.score, anomalyBlocks: tamper.anomalyBlocks || 0, contentBlocks: tamper.contentBlocks || 0 }, ocrConf: S.ocr.confidence, ocrMs: S.ocr.ms, elaMs, totalMs: Math.round(performance.now() - S.t0), score: sc.score, classification: sc.classification, factors: sc.factors, explanation: sc.explanation };
+      const rec = { id, ts: new Date().toISOString(), user: user().email, file: S.info.name, hash: S.info.hash, fields: f, corrected: S.corrected, xv: { found: xv.found, fields: xv.fields }, tamper: { available: tamper.available, score: tamper.score, anomalyBlocks: tamper.anomalyBlocks || 0, contentBlocks: tamper.contentBlocks || 0 }, cnn, ocrConf: S.ocr.confidence, ocrMs: S.ocr.ms, elaMs, totalMs: Math.round(performance.now() - S.t0), score: sc.score, classification: sc.classification, factors: sc.factors, explanation: sc.explanation };
       Store.saveRequest(rec);
       await Store.appendAudit(user().email, "Completed verification", f.number, sc.classification, "Risk: " + sc.score + "/100" + (S.corrected.length ? "; fields corrected: " + S.corrected.join(",") : ""));
       S.res = { ...rec, lines: S.ocr.lines, heatUrl, tamper: { ...rec.tamper } }; S.showEla = false; S.view = "result"; render();

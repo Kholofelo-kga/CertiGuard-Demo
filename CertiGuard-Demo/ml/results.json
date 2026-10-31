@@ -1,0 +1,35 @@
+{
+ "threshold": 0.9475806355476379,
+ "n_test": 270,
+ "accuracy": 0.937037037037037,
+ "precision": 0.8476190476190476,
+ "recall": 0.9888888888888889,
+ "f1": 0.9128205128205128,
+ "auc": 0.99,
+ "fpr_genuine": 0.022222222222222223,
+ "fpr_benign": 0.15555555555555556,
+ "recall_by_type": {
+  "copy_paste": 1.0,
+  "local_blur": 1.0,
+  "text_date": 1.0,
+  "text_name": 0.9444444444444444,
+  "text_qual": 1.0
+ },
+ "fpr_by_benign": {
+  "benign_blur": 0.09090909090909091,
+  "benign_bright": 0.0,
+  "benign_resave": 0.0,
+  "benign_resize": 0.2857142857142857,
+  "benign_rotate": 0.34615384615384615
+ },
+ "auc_by_type": {
+  "copy_paste": 1.0,
+  "local_blur": 1.0,
+  "text_date": 1.0,
+  "text_name": 0.9975308641975309,
+  "text_qual": 1.0
+ },
+ "localisation": 1.0,
+ "params": 116369,
+ "train_tiles": 62840
+}
