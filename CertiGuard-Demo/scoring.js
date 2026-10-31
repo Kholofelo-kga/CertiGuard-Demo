@@ -59,13 +59,15 @@
       if (ocrConf < 60) { total += W.ocrLow; factors.push({ key: "ocr", points: W.ocrLow, text: "Low OCR confidence (" + ocrConf + "%): extracted text may be unreliable" }); }
       total = Math.max(0, Math.min(100, total));
       let cls = total >= 70 ? "Forged" : total >= 30 ? "Suspicious" : "Genuine";
+      // Forged needs a record contradiction: a missing record or a model flag alone only means "cannot confirm / review".
+      let capped = false; if (cls === "Forged" && !Object.values(xv.fields).some(f => f.status === "Mismatched")) { cls = "Suspicious"; capped = true; }
       // Safety rule: a result is Genuine only if all five fields match the institution record.
       if (cls === "Genuine" && Object.values(xv.fields).some(f => f.status !== "Matched")) cls = "Suspicious";
       const noNum = xv.missingNumber && cls !== "Genuine";
       const text = cls === "Genuine"
         ? "All checked fields match the institution record and no edit region was flagged by the integrity checks."
         : (noNum ? "Manual review required, authenticity not confirmed. " : "") + "Classified " + cls + " mainly because: " + factors.filter(f => f.points > 0).sort((a, b) => b.points - a.points).slice(0, 2).map(f => f.text.charAt(0).toLowerCase() + f.text.slice(1)).join("; ") + ".";
-      return { score: total, classification: cls, factors, explanation: text };
+      return { score: total, classification: cls, factors, explanation: text + (capped ? " The risk score is high, but Forged is only declared when a field contradicts an institution record; here the record could not be located, so the result is Suspicious and needs manual review." : "") };
     }
   };
   G.CG.Scoring = Scoring;

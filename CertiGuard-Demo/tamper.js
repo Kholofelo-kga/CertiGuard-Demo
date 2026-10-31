@@ -6,7 +6,7 @@
 (function (G) {
   "use strict";
   const T = 64, WIDTH = 1400; let session = null;
-  const CFG = { thr: 0.9476 };   // chosen on the validation split only (<= 5% false positives on unedited validation images)
+  const CFG = { thr: 0.9811 };   // chosen on the validation split only (maximises validation F1)
   async function load() {
     if (session) return session;
     ort.env.wasm.wasmPaths = new URL("vendor/ort/", document.baseURI).href; ort.env.wasm.numThreads = 1; ort.env.wasm.proxy = false;
@@ -27,8 +27,14 @@
       const out = await sess.run({ x: new ort.Tensor("float32", inp, [n, 1, T, T]) }), p = Array.from(out.p.data);
       const top = p.slice().sort((a, b) => b - a).slice(0, 3), score = top.reduce((a, b) => a + b, 0) / top.length;
       const regions = []; p.forEach((v, i) => { if (v >= CFG.thr) regions.push({ x: (i % cols) * T / w, y: Math.floor(i / cols) * T / h, w: T / w, h: T / h, p: v }); });
-      return { score, flagged: score >= CFG.thr, regions, tiles: n, ms: Math.round(performance.now() - t0) };
+      return { score, flagged: score >= CFG.thr, regions, tiles: n, cols, rows, probs: p, ms: Math.round(performance.now() - t0) };
     }
+  };
+  // Model-based heat-map: every tile coloured by its tile probability (white = unlikely, purple to red = likely edited)
+  Tamper.heatmap = function (c) {
+    const cv = document.createElement("canvas"); cv.width = c.cols * 8; cv.height = c.rows * 8; const x = cv.getContext("2d");
+    c.probs.forEach((p, i) => { const a = Math.max(0, (p - 0.5) / 0.5); if (a <= 0) return; x.fillStyle = `rgba(${Math.round(124 + 120 * a)},${Math.round(58 * (1 - a))},${Math.round(237 - 150 * a)},${(0.15 + 0.6 * a).toFixed(2)})`; x.fillRect((i % c.cols) * 8, Math.floor(i / c.cols) * 8, 8, 8); });
+    return cv;
   };
   G.CG.Tamper = Tamper;
 })(window);

@@ -1,4 +1,4 @@
-/* CertiGuard v2 - Web interface / application controller.
+/* CertiGuard - Web interface / application controller.
    All user-supplied or OCR-derived text is escaped (esc) before it is placed in the page. */
 (function () {
   "use strict";
@@ -130,9 +130,38 @@
     const r = S.res, img = S.prep;
     return layout(`<h1>Verify Certificate</h1>${steps(4)}<div class="resultHero unsupported"><div><div class="eyebrow" style="color:white">VERIFICATION OUTCOME</div><h1>Unsupported document</h1><div>${esc(OCR.TYPES[r.docType])}</div></div></div><div class="grid2"><div class="panel"><h2>What was read from the document</h2><table class="table">${Object.keys(Scoring.LABEL).map(k => `<tr><td>${esc(Scoring.LABEL[k])}</td><td>${esc(r.fields[k] || "Not available")}</td></tr>`).join("")}</table><p>${esc(r.explanation)}</p><div class="actions"><button class="primary" data-act="print">▧ Print / Save Report</button><button class="secondary" data-act="reset">Verify Another</button></div></div><div class="panel"><h2>Document</h2><div class="ovl"><img src="${esc(img.url)}" alt="Uploaded document"></div><p class="sub mono">Reference ${esc(r.id)}<br>SHA-256: ${esc(r.hash)}<br>OCR ${esc(r.ocrMs)} ms · total ${esc(r.totalMs)} ms</p></div></div>`, "verify");
   }
+  // FR-09: real downloadable PDF verification report (jsPDF, generated in the browser)
+  async function makePdf() {
+    const r = S.res, cls = r.finalClass || r.classification, J = window.jspdf.jsPDF, doc = new J({ unit: "mm", format: "a4" });
+    const A = s => String(s == null ? "" : s).replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/[^\x20-\x7E]/g, "?");
+    let y = 16; const L = 15, Wd = 180, line = (t, size = 10, bold = false, gap = 5) => { doc.setFont("helvetica", bold ? "bold" : "normal"); doc.setFontSize(size); for (const l of doc.splitTextToSize(A(t), Wd)) { if (y > 280) { doc.addPage(); y = 16; } doc.text(l, L, y); y += gap; } };
+    line("CertiGuard - Verification Report", 17, true, 8); line("Reference " + r.id + "  |  " + new Date(r.ts).toLocaleString() + "  |  Officer: " + r.user, 9, false, 6);
+    line("Outcome: " + cls + (r.classification === "Unsupported" ? "" : "   (risk score " + r.score + "/100, a rule-based review priority)"), 14, true, 8);
+    if (r.finalClass) line("Administrator decision recorded. Original automated outcome: " + r.classification, 9, false, 6);
+    line("File: " + r.file + "\nSHA-256: " + r.hash, 8, false, 4); y += 3;
+    line("Certificate details and validation findings", 12, true, 7);
+    Object.keys(Scoring.LABEL).forEach(k => { const x = r.xv && r.xv.fields[k]; line(Scoring.LABEL[k] + ": " + (r.fields[k] || "Not available") + (x ? "   | record: " + x.expected + "   | " + x.status : ""), 9, false, 5); });
+    y += 2; line("Explanation", 12, true, 7); line(r.explanation, 10, false, 5);
+    if (r.factors) { y += 2; line("Score factors", 12, true, 7); r.factors.forEach(f => line("+" + f.points + "  " + f.text, 9, false, 5)); }
+    y += 2; line("Explainable-AI evidence", 12, true, 7);
+    line(r.cnn && r.cnn.available ? "Tamper-region CNN score " + r.cnn.score.toFixed(2) + " (threshold " + Tamper.CFG.thr.toFixed(2) + "): " + (r.cnn.flagged ? r.cnn.regions.length + " tile(s) flagged as possibly edited (purple). " : "no region flagged. ") + "Trained on synthetic data only; decision support, not proof." : "Tamper-region CNN not applied to this file type.", 9, false, 5);
+    line(r.tamper && r.tamper.available ? "ELA (experimental, not scored): " + r.tamper.anomalyBlocks + " clustered anomalous block(s)." : "ELA not applied.", 9, false, 5);
+    line(prov(r), 8, false, 4);
+    try {   // evidence image: document with OCR boxes (green/red/amber) and CNN tiles (purple)
+      const bmp = await createImageBitmap(S.prep.blob), w = 900, h = Math.round(bmp.height * w / bmp.width), sc = w / S.prep.w, c = document.createElement("canvas"); c.width = w; c.height = h;
+      const g = c.getContext("2d"); g.drawImage(bmp, 0, 0, w, h); g.lineWidth = 3;
+      if (r.xv && r.lines) Object.keys(r.xv.fields).forEach(k => { const l = OCR.locate(r.lines, r.fields[k]); if (!l) return; const st = r.xv.fields[k].status; g.strokeStyle = st === "Matched" ? "#16a34a" : st === "Mismatched" ? "#dc2626" : "#d97706"; g.strokeRect((l.bbox.x0 - 8) * sc, (l.bbox.y0 - 8) * sc, (l.bbox.x1 - l.bbox.x0 + 16) * sc, (l.bbox.y1 - l.bbox.y0 + 16) * sc); });
+      if (r.cnn && r.cnn.available && r.cnn.flagged) { g.fillStyle = "rgba(124,58,237,0.30)"; r.cnn.regions.forEach(q => g.fillRect(q.x * w, q.y * h, q.w * w, q.h * h)); }
+      const mh = Math.min(120, Wd * h / w); if (y + mh > 285) { doc.addPage(); y = 16; } doc.addImage(c.toDataURL("image/jpeg", 0.85), "JPEG", L, y, Wd * (mh / (Wd * h / w)), mh); y += mh + 4;
+      line("Green = field matches record, red = differs, amber = could not be compared, purple = CNN edit region.", 8, false, 4);
+    } catch (e) { line("(Evidence image could not be added.)", 8); }
+    doc.save("CertiGuard_Report_" + r.id + ".pdf");
+    await Store.appendAudit(user().email, "Report downloaded", r.fields.number || "-", cls, r.id);
+  }
   function cnnPanel(r) {
     const c = r.cnn; if (!c || !c.available) return `<p class="sub">Tamper-region CNN: ${c && c.error ? "could not run in this browser; no CNN evidence." : "not applied to PDF files."}</p>`;
-    return `<p class="sub"><b>Tamper-region CNN:</b> score ${esc(c.score.toFixed(2))} (flag threshold ${esc(Tamper.CFG.thr.toFixed(2))}) in ${esc(c.ms)} ms. ${c.flagged ? "<b>" + esc(c.regions.length) + " tile(s) look edited</b> (purple boxes). This is a trained model for synthetic edits; it is decision support and not proof." : "No region was flagged. This does not prove the document is unedited."}</p>`;
+    const xai = r.xaiMs != null ? ` Explanation and heat-map were ready ${esc(r.xaiMs)} ms after the CNN finished (target 2000 ms).` : "";
+    return `<div class="toggle"><label><input type="checkbox" data-act="cnnmap" ${S.showCnn ? "checked" : ""}>Show CNN heat-map (tile probability of an edit)</label></div><p class="sub"><b>Tamper-region CNN:</b> score ${esc(c.score.toFixed(2))} (flag threshold ${esc(Tamper.CFG.thr.toFixed(2))}) in ${esc(c.ms)} ms. ${c.flagged ? "<b>" + esc(c.regions.length) + " tile(s) look edited</b> (purple boxes). This is a trained model for synthetic edits; it is decision support and not proof." : "No region was flagged. This does not prove the document is unedited."}${xai}</p>`;
   }
   function resultView() {
     if (S.res.classification === "Unsupported") return unsupportedView();
@@ -149,8 +178,8 @@
     <div class="notice" role="note"><b>How to read this.</b> ${esc(prov(r))} The score is a rule-based <b>review priority</b>, not a probability of fraud; Suspicious and Forged results need human review.</div>
     <div class="grid2"><div class="panel"><div class="eyebrow">CROSS-VALIDATION</div><h2>Field-by-field evidence</h2><table class="table"><tr><th>Field</th><th>Extracted</th><th>Institution record</th><th>Status</th></tr>${Object.keys(r.xv.fields).map(k => `<tr><td>${esc(Scoring.LABEL[k])}</td><td>${esc(r.fields[k] || "Not available")}</td><td>${esc(r.xv.fields[k].expected)}</td><td class="st-${esc(r.xv.fields[k].status.replace(" ", ""))}">${esc(r.xv.fields[k].status)}</td></tr>`).join("")}</table>
     <h3>Why this result?</h3><p>${esc(r.explanation)}</p>${r.factors.map(f => `<div class="bar"><div>${esc(f.text)}<i style="width:${f.points / max * 100}%;margin-top:4px;${f.points ? "" : "background:#9aa7bb"}"></i></div><b>+${esc(f.points)}</b></div>`).join("")}
-    <div class="actions"><button class="primary" data-act="print">▧ Print / Save Report</button>${Auth.can("override") && cls !== "Genuine" && !r.finalClass ? `<button class="secondary" data-act="go" data-v="override">Administrator Override</button>` : ""}<button class="secondary" data-act="reset">Verify Another</button></div></div>
-    <div class="panel"><div class="eyebrow">EXPLAINABLE EVIDENCE</div><h2>Where the evidence is</h2><p class="sub">Green = matches the record; red = differs from the record; amber = could not be compared (no record, or value missing). Boxes mark where OCR read each value, they are <b>not</b> proof of tampering. Purple = region the CNN considers possibly edited.</p><div class="ovl"><img src="${esc(img.url)}" alt="Certificate with evidence boxes">${boxes}${cnnBoxes}</div>
+    <div class="actions"><button class="primary" data-act="pdf">⇩ Download PDF Report</button><button class="secondary" data-act="print">Print</button>${Auth.can("override") && cls !== "Genuine" && !r.finalClass ? `<button class="secondary" data-act="go" data-v="override">Administrator Override</button>` : ""}<button class="secondary" data-act="reset">Verify Another</button></div></div>
+    <div class="panel"><div class="eyebrow">EXPLAINABLE EVIDENCE</div><h2>Where the evidence is</h2><p class="sub">Green = matches the record; red = differs from the record; amber = could not be compared (no record, or value missing). Boxes mark where OCR read each value, they are <b>not</b> proof of tampering. Purple = region the CNN considers possibly edited.</p><div class="ovl"><img src="${esc(img.url)}" alt="Certificate with evidence boxes">${S.showCnn && r.cnnHeat ? `<img class="heatov" src="${esc(r.cnnHeat)}" alt="CNN heat-map">` : ""}${boxes}${cnnBoxes}</div>
     ${cnnPanel(r)}
     ${r.tamper.available ? `<div class="toggle"><label><input type="checkbox" data-act="ela" ${S.showEla ? "checked" : ""}>Show experimental ELA heat-map (advisory only)</label></div>${S.showEla ? `<div class="ovl"><img src="${esc(r.heatUrl)}" alt="Error level analysis heat-map"></div><p class="sub">ELA found ${esc(r.tamper.anomalyBlocks)} clustered anomalous block(s) of ${esc(r.tamper.contentBlocks)} content blocks. This heuristic is not a trained model and has low weight in the score.</p>` : ""}` : `<p class="sub">Integrity (ELA) analysis is not applied to PDF files.</p>`}
     <hr><h3>Verification reference</h3><b class="mono">${esc(r.id)}</b><p class="sub mono">File: ${esc(r.file)}<br>SHA-256: ${esc(r.hash)}<br>OCR ${esc(r.ocrMs)} ms · ELA ${esc(r.elaMs)} ms · total ${esc(r.totalMs)} ms<br>Checked: ${esc(new Date(r.ts).toLocaleString())} by ${esc(r.user)}</p></div></div>`, "verify");
@@ -245,15 +274,16 @@
       const xv = Scoring.crossValidate(f); S.stage = 1; render(); await new Promise(r => setTimeout(r, 30));
       let tamper = { available: false, score: 0 }, heatUrl = "", elaMs = 0;
       if (!S.prep.pdf) { const t = await ELA.analyse(S.prep.blob); elaMs = t.ms; tamper = { ...t, available: true }; heatUrl = await new Promise(r => t.heatmap.toBlob(b => r(URL.createObjectURL(b)), "image/png")); }
-      let cnn = { available: false };
-      if (!S.prep.pdf) { try { const c = await Tamper.analyse(S.prep.blob); cnn = { available: true, score: c.score, flagged: c.flagged, ms: c.ms, regions: c.regions.slice(0, 80) }; } catch (e) { console.error(e); cnn = { available: false, error: true }; } }
+      let cnn = { available: false }, cnnHeat = "";
+      if (!S.prep.pdf) { try { const c = await Tamper.analyse(S.prep.blob); cnn = { available: true, score: c.score, flagged: c.flagged, ms: c.ms, regions: c.regions.slice(0, 80) }; cnnHeat = await new Promise(r => Tamper.heatmap(c).toBlob(b => r(URL.createObjectURL(b)), "image/png")); S.tCnn = performance.now(); } catch (e) { console.error(e); cnn = { available: false, error: true }; } }
       S.stage = 2; render(); await new Promise(r => setTimeout(r, 30));
       const sc = Scoring.score(xv, tamper, S.ocr.confidence, cnn); S.stage = 3; render();
       const id = "CG-" + new Date().getFullYear() + "-" + S.info.hash.slice(0, 8).toUpperCase();
       const rec = { id, ts: new Date().toISOString(), user: user().email, file: S.info.name, hash: S.info.hash, fields: f, corrected: S.corrected, xv: { found: xv.found, fields: xv.fields }, tamper: { available: tamper.available, score: tamper.score, anomalyBlocks: tamper.anomalyBlocks || 0, contentBlocks: tamper.contentBlocks || 0 }, cnn, ocrConf: S.ocr.confidence, ocrMs: S.ocr.ms, elaMs, totalMs: Math.round(performance.now() - S.t0), score: sc.score, classification: sc.classification, factors: sc.factors, explanation: sc.explanation };
       Store.saveRequest(rec);
       await Store.appendAudit(user().email, "Completed verification", f.number, sc.classification, "Risk: " + sc.score + "/100" + (S.corrected.length ? "; fields corrected: " + S.corrected.join(",") : ""));
-      S.res = { ...rec, lines: S.ocr.lines, heatUrl, tamper: { ...rec.tamper } }; S.showEla = false; S.view = "result"; render();
+      S.res = { ...rec, lines: S.ocr.lines, heatUrl, cnnHeat, tamper: { ...rec.tamper } }; S.showEla = false; S.showCnn = false; S.view = "result"; render();
+      if (S.tCnn) { S.res.xaiMs = Math.round(performance.now() - S.tCnn); S.tCnn = 0; render(); }
     } catch (e) {
       console.error(e); await Store.appendAudit(user().email, "Processing error", S.fields?.number || "-", "Failed", "Analysis stage");
       S.view = "review"; S.msg = "The analysis could not be completed. Your entries are kept; please try again."; render();
@@ -310,6 +340,8 @@
     else if (a === "analyse") await analyse();
     else if (a === "confirm") await confirm();
     else if (a === "print") window.print();
+    else if (a === "cnnmap") { S.showCnn = t.checked; render(); }
+    else if (a === "pdf") await makePdf();
     else if (a === "ela") { S.showEla = t.checked; render(); }
     else if (a === "saveOverride") await saveOverride();
     else if (a === "chain") { S.auditCheck = await Store.verifyAuditChain(); render(); }
