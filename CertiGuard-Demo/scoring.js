@@ -20,7 +20,7 @@
     }
     return 1 - lev(a, b) / L;
   };
-  const W = { number: 45, name: 30, qualification: 20, institution: 20, date: 25, tamperMax: 0, ocrLow: 8 };
+  const W = { number: 45, name: 30, qualification: 20, institution: 20, date: 25, tamperMax: 0, ocrLow: 8, cnn: 30 };
   const LABEL = { name: "Student name", number: "Certificate number", qualification: "Qualification", institution: "Institution", date: "Issue date" };
 
   const Scoring = {
@@ -38,7 +38,7 @@
       });
       return { record: rec || null, fields: out, found, missingNumber: !String(f.number || "").trim() };
     },
-    score(xv, tamper, ocrConf) {
+    score(xv, tamper, ocrConf, cnn) {
       const factors = []; let total = 0;
       for (const k of ["number", "name", "qualification", "institution", "date"]) {
         const st = xv.fields[k].status;
@@ -54,6 +54,8 @@
         const pts = Math.round(W.tamperMax * tamper.score / 100); total += pts;
         factors.push({ key: "tamper", points: pts, text: "Experimental ELA heuristic flagged " + tamper.anomalyBlocks + " clustered region(s): informational only, not scored (see System Info)" });
       } else factors.push({ key: "tamper", points: 0, text: "Integrity (ELA) analysis not available for this file type; tamper evidence not assessed" });
+      if (cnn && cnn.available && cnn.flagged) { total += W.cnn; factors.push({ key: "cnn", points: W.cnn, text: "Tamper-region CNN flagged " + cnn.regions.length + " tile(s) as possibly edited (score " + cnn.score.toFixed(2) + "); model trained on synthetic data, review required" }); }
+      else if (cnn && cnn.available) factors.push({ key: "cnn", points: 0, text: "Tamper-region CNN flagged no region (score " + cnn.score.toFixed(2) + ")" });
       if (ocrConf < 60) { total += W.ocrLow; factors.push({ key: "ocr", points: W.ocrLow, text: "Low OCR confidence (" + ocrConf + "%): extracted text may be unreliable" }); }
       total = Math.max(0, Math.min(100, total));
       let cls = total >= 70 ? "Forged" : total >= 30 ? "Suspicious" : "Genuine";
@@ -61,7 +63,7 @@
       if (cls === "Genuine" && Object.values(xv.fields).some(f => f.status !== "Matched")) cls = "Suspicious";
       const noNum = xv.missingNumber && cls !== "Genuine";
       const text = cls === "Genuine"
-        ? "All checked fields match the institution record and no clustered edit evidence was found."
+        ? "All checked fields match the institution record and no edit region was flagged by the integrity checks."
         : (noNum ? "Manual review required, authenticity not confirmed. " : "") + "Classified " + cls + " mainly because: " + factors.filter(f => f.points > 0).sort((a, b) => b.points - a.points).slice(0, 2).map(f => f.text.charAt(0).toLowerCase() + f.text.slice(1)).join("; ") + ".";
       return { score: total, classification: cls, factors, explanation: text };
     }

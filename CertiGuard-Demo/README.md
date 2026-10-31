@@ -27,3 +27,7 @@ Upload the whole folder to the ROOT of the GitHub repository; Vercel serves it a
 ## Tests
 `npm i playwright && npx playwright install chromium` then `BASE_URL=http://localhost:8080 node tests/run-tests.js`
 Regenerate sample certificates: `python3 tests/gen_samples.py`
+
+
+## Tamper-region CNN (v3)
+`tamper.js` runs `model/tamper_cnn.onnx` in the browser with onnxruntime-web (vendored in `vendor/ort/`). The model (116k parameters) was trained from scratch by `ml/train.py` on synthetic tiles produced by `ml/gen_ml.py` (fictional data, split by institution). Held-out results are in `ml/results.json`. It has not been tested on real certificates and gives false alarms on resized or rotated scans: treat a flag as a reason for manual review. To regenerate: `pip install torch onnx onnxscript onnxruntime scikit-learn`, then `python3 ml/gen_ml.py 600 && python3 ml/train.py`.
