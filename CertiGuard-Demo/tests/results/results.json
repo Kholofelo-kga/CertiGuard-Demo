@@ -1,5 +1,5 @@
 {
- "when": "2026-10-30T22:18:00.575Z",
+ "when": "2026-10-30T22:50:40.870Z",
  "base": "http://localhost:8765",
  "tests": [
   {
@@ -175,23 +175,23 @@
  "quant": {
   "latency": {
    "n": 10,
-   "coldTotalMs": 5600,
+   "coldTotalMs": 5686,
    "warmTotalMs": [
-    4555,
-    4574,
-    5057,
-    4544,
-    4569,
-    4579,
-    4569,
-    4555,
-    4573
+    4517,
+    4573,
+    4545,
+    4549,
+    5061,
+    4575,
+    4551,
+    4558,
+    4552
    ],
-   "warmMedianMs": 4569,
-   "warmP95Ms": 5057,
-   "warmMaxMs": 5057,
-   "warmOcrMedianMs": 1080,
-   "warmElaMedianMs": 1075,
+   "warmMedianMs": 4552,
+   "warmP95Ms": 5061,
+   "warmMaxMs": 5061,
+   "warmOcrMedianMs": 1053,
+   "warmElaMedianMs": 1072,
    "under10sPct": 100
   },
   "taskCompletion": {

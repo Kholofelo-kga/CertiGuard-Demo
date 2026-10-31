@@ -107,7 +107,7 @@
   function field(l, k, v) {
     const c = S.corrected.includes(k) ? ` <span class="badge suspicious">edited</span>` : "";
     const e = S.ev && S.ev[k], chk = e && e.why.length ? ` <span class="badge suspicious">check</span>` : "";
-    const src = !v ? `<div class="evid">Not found on the document.</div>` : e ? `<div class="evid ${e.why.length ? "warn" : ""}">${e.text ? "Read from: “" + esc(e.text) + "”" + (e.conf != null ? " (OCR " + esc(e.conf) + "%)" : "") : "Read from the document text"}${e.why.length ? " — <b>check:</b> " + esc(e.why.join("; ")) : ""}</div>` : "";
+    const src = !v ? `<div class="evid ${k === "name" && S.ocr && S.ocr.meta.nameUnread ? "warn" : ""}">${k === "name" && S.ocr && S.ocr.meta.nameUnread ? "The name was found but could not be read reliably (stylised or low-contrast text). <b>Type it from the document.</b>" : "Not found on the document."}</div>` : e ? `<div class="evid ${e.why.length ? "warn" : ""}">${e.text ? "Read from: “" + esc(e.text) + "”" + (e.conf != null ? " (OCR " + esc(e.conf) + "%)" : "") : "Read from the document text"}${e.why.length ? " — <b>check:</b> " + esc(e.why.join("; ")) : ""}</div>` : "";
     return `<label for="f_${k}">${l}${c}${chk}</label>${src}<input id="f_${k}" data-in="${k}" maxlength="100" value="${esc(v)}" placeholder="Not available" class="${S.errs[k] ? "field-err" : ""}"><div class="err" role="alert">${esc(S.errs[k] || "")}</div>`;
   }
   function uncertain() { return Object.keys(S.ev || {}).filter(k => S.ev[k] && S.ev[k].why.length && !S.corrected.includes(k)); }

@@ -5,7 +5,7 @@
    otherwise the field stays empty ("Not available") and is never guessed. */
 (function (G) {
   "use strict";
-  let worker = null, onProg = () => { };
+  let worker = null, worker2 = null, onProg = () => { };
   const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
   const pad = n => String(n).padStart(2, "0");
   const title = s => s.toLowerCase().replace(/\b([a-z])/g, m => m.toUpperCase()).replace(/\b(Of|The|And|In)\b/g, m => m.toLowerCase());
@@ -21,6 +21,12 @@
       logger: m => { if (m.status === "recognizing text") onProg(m.progress); }
     });
     return worker;
+  }
+  async function getWorker2() {
+    if (worker2) return worker2;
+    worker2 = await Tesseract.createWorker("eng", 1, { workerPath: "vendor/tess/worker.min.js", corePath: "vendor/tess/core", langPath: "vendor/tess/lang", workerBlobURL: false });
+    await worker2.setParameters({ tessedit_pageseg_mode: "7" });   // dedicated single-line worker: never changes the main worker's settings
+    return worker2;
   }
   function validIso(y, m, d) {
     const dt = new Date(Date.UTC(y, m - 1, d));
@@ -54,7 +60,9 @@
     if (prof >= 1 && !academic) return "professional";
     return academic >= 1 ? "academic" : "unsupported";
   }
-  const plausibleName = s => { const t = s.trim().split(/\s+/); return t.length >= 2 && t.length <= 6 && t.every(w => /^[A-Za-z'\-]{2,}$/.test(w)) && /[aeiouAEIOU]/.test(s); };
+  const PART = /^(van|von|der|den|de|du|le|la|di|da|bin|al|el|mc|mac|st|jr|sr|ii|iii)$/i;
+  const plausibleName = s => { if (/\b(has|been|awarded|the|certify|this|that|diploma|degree|certificate|university|college|institute|date|number)\b/i.test(s)) return false; const t0 = s.trim().split(/\s+/); if (t0.some(w => w.length <= 2 && !PART.test(w))) return false; return plausibleName0(s); };
+  const plausibleName0 = s => { const t = s.trim().split(/\s+/); return t.length >= 2 && t.length <= 6 && t.every(w => /^[A-Za-z'\-]{2,}$/.test(w)) && /[aeiouAEIOU]/.test(s); };
   const goodLine = s => s && s.length >= 3 && (s.replace(/[^A-Za-z]/g, "").length / s.length) > 0.6;
   // Joins a continuation line ("in Computer Science", "of Technology") to a title that wraps over two lines.
   function joinCont(lines, i, text, re) {
@@ -137,12 +145,39 @@
           r.text = merged; r.lines = r.lines.concat(r2.lines.filter(l2 => !r.lines.some(l1 => l1.text === l2.text)));
         } catch (e) { /* second pass is optional */ }
       }
+      // name safety: a low-confidence name is re-read from a cropped, binarised copy of its line; if still unreliable it is left empty
+      const nm = a.fields.name; let nameUnread = false;
+      if (nm) {
+        const ln = OCR.locate(r.lines, nm);
+        if (!ln || ln.conf < 75) {
+          let got = "";
+          try { if (ln) { const rr = await OCR.rereadLine(src, ln.bbox); const cand = clean(letters(rr.text.replace(/^.*?(awarded to|presented to|certify that|conferred on)\s*/i, ""))); if (rr.conf >= 70 && plausibleName(cand)) got = norm(cand); } } catch (e) { }
+          if (got) a.fields.name = got; else { a.fields.name = ""; nameUnread = true; }
+        }
+      }
+      a.meta.nameUnread = nameUnread;
       return { text: r.text, confidence: r.conf, fields: a.fields, meta: a.meta, lines: r.lines, docType: detectType(r.text), ms: Math.round(performance.now() - t0) };
+    },
+    // re-read one line: crop, upscale, binarise (Otsu), single-line mode
+    async rereadLine(src, bbox) {
+      const bmp = await createImageBitmap(src), pad = 10;
+      const x0 = Math.max(0, bbox.x0 - pad), y0 = Math.max(0, bbox.y0 - pad), w0 = Math.min(bmp.width - x0, bbox.x1 - bbox.x0 + 2 * pad), h0 = Math.min(bmp.height - y0, bbox.y1 - bbox.y0 + 2 * pad);
+      const k = Math.min(4, Math.max(2, 140 / Math.max(1, h0))), c = document.createElement("canvas"); c.width = Math.round(w0 * k); c.height = Math.round(h0 * k);
+      const x = c.getContext("2d", { willReadFrequently: true }); x.imageSmoothingQuality = "high"; x.drawImage(bmp, x0, y0, w0, h0, 0, 0, c.width, c.height);
+      const im = x.getImageData(0, 0, c.width, c.height), d = im.data, hist = new Array(256).fill(0);
+      for (let i = 0; i < d.length; i += 4) { const g = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) | 0; d[i] = g; hist[g]++; }
+      const tot = d.length / 4; let sum = 0; for (let t = 0; t < 256; t++) sum += t * hist[t];
+      let sB = 0, wB = 0, best = 0, th = 128; for (let t = 0; t < 256; t++) { wB += hist[t]; if (!wB) continue; const wF = tot - wB; if (!wF) break; sB += t * hist[t]; const mB = sB / wB, mF = (sum - sB) / wF, v = wB * wF * (mB - mF) * (mB - mF); if (v > best) { best = v; th = t; } }
+      for (let i = 0; i < d.length; i += 4) { const v = d[i] > th ? 255 : 0; d[i] = d[i + 1] = d[i + 2] = v; } x.putImageData(im, 0, 0);
+      const blob = await new Promise(r => c.toBlob(r, "image/png")), w = await getWorker2();
+      const { data } = await w.recognize(blob); return { text: clean(data.text || ""), conf: Math.round(data.confidence || 0) };
     },
     async extractMany(blobs) {
       const t0 = performance.now(); const parts = []; let conf = 0;
       for (let i = 0; i < blobs.length; i++) { onProg(0); parts.push(await OCR.extract(blobs[i], { single: true })); conf += parts[i].confidence; }
       const text = parts.map(p => p.text).join("\n"), a = analyse(text);
+      // names were already safety-checked per page; use the checked value, not a re-parse of the merged text
+      const pn = parts.find(p => p.fields.name); a.fields.name = pn ? pn.fields.name : ""; a.meta.nameUnread = !a.fields.name && parts.some(p => p.meta.nameUnread);
       return { text, confidence: Math.round(conf / parts.length), fields: a.fields, meta: a.meta, lines: parts[0].lines, pages: parts.length, docType: detectType(text), ms: Math.round(performance.now() - t0) };
     },
     locate(lines, value) {
