@@ -1,0 +1,57 @@
+@startuml CertiGuard_UseCase
+' CertiGuard - final use-case diagram (ISJ107V Assignment 5)
+' Names match the application menus and modules: auth.js, ocr.js, tamper.js, ela.js, scoring.js, store.js, app.js
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #EAF2FB
+  BorderColor #2F5D8A
+}
+skinparam rectangle {
+  BorderColor #2F5D8A
+}
+
+actor "Verification\nOfficer" as VO
+actor "Administrator" as AD
+VO <|-- AD
+
+rectangle "CertiGuard (browser application)" {
+  usecase "UC-01 Log in" as UC01
+  usecase "UC-02 Upload and validate\ncertificate (JPG/PNG/PDF)" as UC02
+  usecase "UC-03 Extract fields\nwith OCR" as UC03 #DFF3E4
+  usecase "UC-04 Review and correct\nextracted fields" as UC04
+  usecase "UC-05 Cross-validate against\ninstitution records" as UC05
+  usecase "UC-06 Analyse document integrity\n(tamper CNN; ELA not scored)" as UC06 #DFF3E4
+  usecase "UC-07 Calculate risk score\nand classification" as UC07
+  usecase "UC-08 View explainable result\n(factors, evidence boxes, heat-map)" as UC08
+  usecase "UC-09 Download PDF report" as UC09
+  usecase "UC-10 Override classification\n(with justification)" as UC10 #FBE3E3
+  usecase "UC-11 View audit trail, verify\nchain, export CSV" as UC11 #FBE3E3
+  usecase "UC-12 Manage institution records\n(add, edit, activate/deactivate)" as UC12 #FBE3E3
+}
+
+VO --> UC01
+VO --> UC02
+VO --> UC04
+VO --> UC08
+AD --> UC10
+AD --> UC11
+AD --> UC12
+
+UC02 ..> UC03 : <<include>>
+UC04 ..> UC05 : <<include>>
+UC04 ..> UC06 : <<include>>
+UC04 ..> UC07 : <<include>>
+UC09 ..> UC08 : <<extend>>
+UC10 ..> UC08 : <<extend>>
+
+note right of UC06
+  Emerging technology (green):
+  Tesseract.js LSTM OCR and an ONNX
+  tamper CNN, both run in the browser.
+  A CNN flag means "review", not proof.
+end note
+@enduml

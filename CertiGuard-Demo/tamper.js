@@ -1,5 +1,5 @@
 /* CertiGuard v3 - tamper-region CNN (emerging-technology component 2).
-   A small convolutional network (116k parameters, trained from scratch on synthetic certificates, see ml/) is exported to ONNX and run in the
+   A small convolutional network (116k parameters, trained from scratch on synthetic certificates, see ml/; an Assignment 5 retraining on 1,500 documents was evaluated and not adopted, see ml/a5_experiment/) is exported to ONNX and run in the
    browser with onnxruntime-web (WebAssembly). The page is resized to 1400 px width and cut into 64x64 grey tiles; every tile gets a "possibly edited" probability.
    The image score is the mean of the three highest tile probabilities. Tiles above the threshold are shown as suspected-edit regions.
    It was trained and tested ONLY on synthetic certificates: it is decision support, not proof of forgery. */

@@ -1,0 +1,44 @@
+@startuml CertiGuard_Component
+' CertiGuard - component diagram of the final system (ISJ107V Assignment 5)
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam componentStyle uml2
+
+package "CertiGuard static web application" {
+  [Web interface\n(index.html, style.css, app.js)] as UI
+  [Auth & RBAC\n(auth.js)] as AUTH
+  [OCR service\n(ocr.js)] as OCR #E6F5EA
+  [Tamper CNN\n(tamper.js)] as CNN #E6F5EA
+  [ELA service\n(ela.js, display only)] as ELA
+  [Scoring engine\n(scoring.js)] as SC
+  [Data service\n(store.js)] as DS
+}
+
+package "Vendored libraries (vendor/, offline)" {
+  [Tesseract.js 5\n+ eng.traineddata] as TESS
+  [onnxruntime-web\n(WASM)] as ORT
+  [pdf.js] as PDFJS
+  [jsPDF] as JSPDF
+}
+
+artifact "model/tamper_cnn.onnx\n(116,369 parameters)" as MODEL
+database "Browser storage\nlocalStorage (AES-GCM ciphertext): cg.users,\ncg.records, cg.requests, cg.audit\nsessionStorage: cg.session" as LS
+database "IndexedDB\nnon-extractable key" as IDB
+
+UI --> AUTH : login / can()
+UI --> OCR : extract()
+UI --> SC : crossValidate() / score()
+UI --> CNN : analyse()
+UI --> ELA : analyse()
+UI --> DS : save / audit
+UI --> PDFJS : render PDF pages
+UI --> JSPDF : PDF report
+AUTH --> DS
+SC --> DS : findRecord()
+OCR --> TESS
+CNN --> ORT
+CNN --> MODEL
+DS --> LS
+DS --> IDB
+@enduml

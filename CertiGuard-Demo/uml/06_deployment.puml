@@ -1,0 +1,39 @@
+@startuml CertiGuard_Deployment
+' CertiGuard - deployment diagram of the final system (ISJ107V Assignment 5)
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+
+node "GitHub\n(repository, main branch)" as GH {
+  artifact "CertiGuard source\n(HTML, JS, CSS, vendor/, model/, samples/)" as SRC
+}
+
+cloud "Vercel (static hosting, CDN)" as VC {
+  node "Static site\ncerti-guard-demo.vercel.app" as SITE {
+    artifact "index.html + *.js\nvercel.json" as STATIC
+  }
+}
+
+node "User laptop / desktop" as PC {
+  node "Web browser (Chrome / Edge / Firefox)" as BR {
+    component "CertiGuard app\n(main thread)" as APP
+    component "Tesseract.js\nWeb Worker (WASM)" as WW
+    component "onnxruntime-web\n(WASM)" as ORTW
+    database "localStorage (encrypted) /\nsessionStorage / IndexedDB key" as STORE
+  }
+  node "Offline fallback:\npython3 -m http.server 8080" as LOCAL
+}
+
+GH --> SITE : push triggers build/deploy
+SITE --> APP : HTTPS (static files only)
+LOCAL --> APP : http://localhost:8080\n(same files, no internet)
+APP --> WW
+APP --> ORTW
+APP --> STORE
+
+note bottom of BR
+  Certificates are processed on the device and are never uploaded.
+  No server, API or database: every module runs in the browser
+  (Content-Security-Policy: default-src 'self').
+end note
+@enduml

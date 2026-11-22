@@ -1,0 +1,31 @@
+@startuml CertiGuard_Sequence_Slide
+' Condensed slide version of 03_sequence_verify.puml (same participants and order of calls)
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 15
+hide footbox
+autonumber
+actor "Officer" as VO
+participant "Web interface\n(app.js)" as UI
+participant "OCR service\n(ocr.js)" as OCR #E6F5EA
+participant "Scoring engine\n(scoring.js)" as SC
+participant "Tamper CNN\n(tamper.js)" as CNN #E6F5EA
+participant "Data service\n(store.js)" as DS
+VO -> UI : upload file
+UI -> UI : validateFile() + SHA-256
+UI -> OCR : extract(blob)
+OCR --> UI : OCRResult (fields, lines, confidence)
+UI --> VO : review screen
+VO -> UI : correct + confirm fields
+UI -> UI : validateFields()
+UI -> SC : crossValidate(fields)
+SC -> DS : findRecord(number)
+DS --> SC : InstitutionRecord | none
+SC --> UI : 5 x FieldCheck
+UI -> CNN : analyse(blob)  [JPG/PNG]
+CNN --> UI : CNNResult (score, regions)
+UI -> SC : score(xv, ela, ocrConf, cnn)
+SC --> UI : score, class, factors, explanation
+UI -> DS : saveRequest(); appendAudit()
+UI --> VO : explainable result
+@enduml

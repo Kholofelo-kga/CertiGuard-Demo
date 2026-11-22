@@ -1,0 +1,651 @@
+{
+ "when": "2026-11-21T21:32:50.470Z",
+ "base": "http://localhost:8765",
+ "tests": [
+  {
+   "id": "TC-01",
+   "area": "Security",
+   "name": "Login with valid administrator credentials",
+   "expected": "Dashboard opens; role shown as Administrator",
+   "actual": "Dashboard shown; badge: ● PROTOTYPE · ADMINISTRATOR",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-02",
+   "area": "Security",
+   "name": "Login with wrong password",
+   "expected": "Rejected with generic message; no session; failed attempt audited",
+   "actual": "\"Invalid email or password.\"; session=null; audit=\"Login failed\"",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-03",
+   "area": "Security",
+   "name": "Three failed logins lock the form",
+   "expected": "Lock message appears after the third failure; the valid password is also refused while locked",
+   "actual": "\"Too many failed attempts. Locked for 30 seconds.\" then valid password: \"Too many failed attempts. Try again in 30 s.\"",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-04",
+   "area": "Security",
+   "name": "Verification Officer tries to open the Audit Trail",
+   "expected": "Audit menu hidden; direct attempt denied and logged",
+   "actual": "menu hidden=true; message shown; audit=\"Access denied\"",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-05",
+   "area": "Validation",
+   "name": "Upload a text file renamed to .png",
+   "expected": "Rejected: content is not a real image",
+   "actual": "The file content is not a real JPG, PNG or PDF (the extension does not match its content).",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-06",
+   "area": "Validation",
+   "name": "Upload a file larger than 10 MB",
+   "expected": "Rejected with size message; OCR not started",
+   "actual": "File too large (10.5 MB). The limit is 10 MB.",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-07",
+   "area": "Security",
+   "name": "File name containing an HTML/script payload",
+   "expected": "Payload shown as plain text; no script executes",
+   "actual": "window.__xss=undefined; file name displayed literally",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-08",
+   "area": "Workflow + AI",
+   "name": "Genuine certificate end to end (JPG)",
+   "expected": "OCR reads 5/5 fields; all Matched; classification Genuine; request saved and audited",
+   "actual": "Genuine, risk 0/100, 5/5 fields Matched; audit=\"Completed verification\"",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-09",
+   "area": "Workflow + AI",
+   "name": "Certificate with altered student name",
+   "expected": "Name field Mismatched; classification not Genuine; evidence box on name",
+   "actual": "Suspicious, risk 60/100, 1 field(s) Mismatched, 1 red evidence box(es)",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-10",
+   "area": "Workflow + AI",
+   "name": "Certificate whose number is not in the institution records",
+   "expected": "All fields Not Found; classification Suspicious (cannot be confirmed)",
+   "actual": "Suspicious, risk 75/100, 5/5 fields Not Found",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-11",
+   "area": "Workflow + AI",
+   "name": "Genuine certificate supplied as PDF",
+   "expected": "PDF page rendered, OCR succeeds, classification Genuine, ELA marked not applicable",
+   "actual": "Genuine, risk 0/100; ELA not-applicable notice shown=true",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-12",
+   "area": "Validation",
+   "name": "Impossible issue date entered during review (2026-02-31)",
+   "expected": "Verification blocked; field-level error shown; stays on review screen",
+   "actual": "\"Use a real date in YYYY-MM-DD format.\"",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-13",
+   "area": "Workflow",
+   "name": "Correct an OCR field, then verify",
+   "expected": "Edited field flagged as edited and used in cross-validation",
+   "actual": "1 field Mismatched; row: Issue date2026-05-142026-05-15Mismatched",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-14",
+   "area": "Governance",
+   "name": "Administrator override with and without justification",
+   "expected": "Empty justification refused; valid one saved to audit with original and revised class",
+   "actual": "empty -> \"Enter a justification of at least 10 characters.\"; saved: Administrator override / Forged / \"Original: Suspicious; reason: Issue date contradic...\"",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-15",
+   "area": "Persistence",
+   "name": "Reload the page and check stored data",
+   "expected": "History, records and audit trail still present after reload",
+   "actual": "requests 5->5, audit entries 7->7",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-16",
+   "area": "Security",
+   "name": "Audit-chain tamper detection",
+   "expected": "Editing a stored audit entry is detected by 'Verify chain integrity'",
+   "actual": "before edit: \"✓ Audit chain intact: 7 entries verified.\" | after edit: \"✗ Audit chain BROKEN at entry 2 of 7: the stored history has...\"",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-17",
+   "area": "Data",
+   "name": "Add an institution record with a duplicate certificate number",
+   "expected": "Rejected with duplicate message; record count unchanged",
+   "actual": "\"A record with this certificate number already exists.\"; records 5->5",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-18",
+   "area": "Document types",
+   "name": "Conference participation certificate (not a qualification)",
+   "expected": "Detected as conference document; reported Unsupported; no record comparison, no risk score, not Forged",
+   "actual": "Unsupported; type shown as conference=true; fields without data shown as \"Not available\"=true",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-19",
+   "area": "Document types",
+   "name": "Diploma that shows no certificate number",
+   "expected": "Number left as Not available (nothing invented); result Suspicious (never Forged without a record contradiction) because it cannot be confirmed; no format error",
+   "actual": "Suspicious, risk 75/100; \"number not found or not reliably identified\" factor shown",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-21",
+   "area": "Extraction",
+   "name": "Hard scan: wrapped qualification, ALL-CAPS name, birth date, other IDs, low resolution",
+   "expected": "Name, qualification, institution read in full; issue date is the 13 Dec 2024 date (not the birth date); IDs not used as certificate number",
+   "actual": "{\"name\":\"Thabo Mokgosi\",\"number\":\"AD12223\",\"qualification\":\"ADVANCED DIPLOMA in Computer Science\",\"institution\":\"Tshwane University of Technology\",\"date\":\"2024-12-13\"}; raw OCR text panel present=true",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-22",
+   "area": "Workflow + AI",
+   "name": "Tamper-region CNN runs in the browser and its evidence is shown",
+   "expected": "Altered sample: CNN factor and purple edit boxes shown; genuine sample: CNN ran (no error) and flagged nothing",
+   "actual": "altered: Suspicious risk 60, 30 purple box(es); genuine: Genuine risk 0",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-23",
+   "area": "Reporting",
+   "name": "Download the verification report as a PDF (FR-09)",
+   "expected": "A real PDF file is downloaded containing reference, outcome, fields, explanation and evidence image; download is audited",
+   "actual": "file CertiGuard_Report_CG-2026-B52F48A5.pdf, 83729 bytes, header %PDF-, image embedded=true, audited=true",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-24",
+   "area": "XAI",
+   "name": "Heat-map and text explanation within 2 s of the CNN result (ETR-03 / FR-08)",
+   "expected": "CNN heat-map can be shown on the document; explanation + heat-map ready < 2000 ms after the CNN finished",
+   "actual": "heat-map overlay shown=true; text explanation + heat-map ready 36 ms after CNN",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-20",
+   "area": "Document types",
+   "name": "Three-page PDF where the certificate is on page 2",
+   "expected": "All pages read; name and institution taken from the document, not from sample data",
+   "actual": "3 pages read; fields: Thando Ndlovu | UL-2025-77821 | Bachelor of Information Science | University of Limpopo | 2025-12-10",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-25",
+   "area": "Data",
+   "name": "Edit an institution record (FR-11 update)",
+   "expected": "Duplicate number refused; valid edit saved, audit-logged and used by the next cross-validation",
+   "actual": "duplicate: \"A record with this certificate number already exists.\"; saved name=Themba Ndlovu; audit=\"Record updated / Changed: name\"; next verification: name Matched, Suspicious 30/100",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-26",
+   "area": "Data",
+   "name": "Deactivate an institution record (FR-11)",
+   "expected": "Status Revoked, audit-logged; a certificate with that number is no longer Genuine",
+   "actual": "status=Revoked; audit=\"Record status changed / Revoked\"; sample 1 now Suspicious 45/100 (record re-activated afterwards)",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-27",
+   "area": "Validation",
+   "name": "Add an institution record with a required field missing (FR-11)",
+   "expected": "Rejected with a required-field message; record count unchanged",
+   "actual": "\"This field is required for an institution record.\"; records 5->5",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-30",
+   "area": "Security",
+   "name": "Stored data is encrypted at rest and tampering with it is detected (NFR-04)",
+   "expected": "localStorage holds only AES-GCM ciphertext (no names readable); altered ciphertext fails authentication on load, is reported to the user and audit-logged",
+   "actual": "4/4 stores encrypted=true; plaintext names found=false; after altering 1 byte: loadErrors=[\"cg.records\"], message shown, audit=\"Storage integrity failure\"",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-28",
+   "area": "Reliability",
+   "name": "Committed records survive a browser restart (NFR-03)",
+   "expected": "After closing and relaunching the browser, verification history and audit trail are still present and the chain is intact",
+   "actual": "requests 1->1, audit 2->2 (+login); ✓ Audit chain intact: 3 entries verified.",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-29",
+   "area": "Performance",
+   "name": "20 concurrent users load the application from the host (NFR-02)",
+   "expected": "Every user receives every file the app needs; 95% of users fully loaded within 10 s",
+   "actual": "Exception: fetch failed",
+   "status": "Fail"
+  }
+ ],
+ "pageErrors": [],
+ "quant": {
+  "latency": {
+   "n": 10,
+   "coldTotalMs": 8855,
+   "warmTotalMs": [
+    6788,
+    7285,
+    7268,
+    6888,
+    7207,
+    6880,
+    6807,
+    7431,
+    6932
+   ],
+   "warmMedianMs": 6932,
+   "warmP95Ms": 7431,
+   "warmMaxMs": 7431,
+   "warmOcrMedianMs": 1129,
+   "warmElaMedianMs": 1078,
+   "under10sPct": 100
+  },
+  "taskCompletion": {
+   "attempts": 10,
+   "completed": 10
+  },
+  "ocrClean": {
+   "images": 20,
+   "fieldsCorrect": 100,
+   "fieldsTotal": 100,
+   "accuracyPct": 100,
+   "meanConf": 95,
+   "perField": {
+    "name": 20,
+    "number": 20,
+    "qualification": 20,
+    "institution": 20,
+    "date": 20
+   },
+   "misses": []
+  },
+  "ocrDegraded": {
+   "blur": {
+    "images": 10,
+    "fieldsCorrect": 50,
+    "fieldsTotal": 50,
+    "accuracyPct": 100,
+    "meanConf": 94,
+    "perField": {
+     "name": 10,
+     "number": 10,
+     "qualification": 10,
+     "institution": 10,
+     "date": 10
+    },
+    "misses": []
+   },
+   "lowres": {
+    "images": 10,
+    "fieldsCorrect": 50,
+    "fieldsTotal": 50,
+    "accuracyPct": 100,
+    "meanConf": 94,
+    "perField": {
+     "name": 10,
+     "number": 10,
+     "qualification": 10,
+     "institution": 10,
+     "date": 10
+    },
+    "misses": []
+   },
+   "skew": {
+    "images": 10,
+    "fieldsCorrect": 48,
+    "fieldsTotal": 50,
+    "accuracyPct": 96,
+    "meanConf": 87,
+    "perField": {
+     "name": 10,
+     "number": 9,
+     "qualification": 10,
+     "institution": 9,
+     "date": 10
+    },
+    "misses": [
+     "skew_06.jpg:number got \"KT1-2025-20931\"",
+     "skew_07.jpg:institution got \"Maruia Coastal University\""
+    ]
+   }
+  },
+  "classification": {
+   "genuineSeeded": {
+    "n": 5,
+    "flaggedGenuine": 4
+   },
+   "tamperedSeeded": {
+    "n": 5,
+    "notGenuine": 5
+   },
+   "unknownInstitution": {
+    "n": 10,
+    "notGenuine": 10
+   },
+   "rows": [
+    {
+     "file": "genuine_01.jpg",
+     "label": "genuine",
+     "seeded": true,
+     "cls": "Genuine",
+     "score": 0,
+     "ela": 10,
+     "anomalies": 5,
+     "cnn": 0.9632104436556498,
+     "cnnFlag": false,
+     "cnnMs": 1235
+    },
+    {
+     "file": "tampered_01.jpg",
+     "label": "tampered",
+     "seeded": true,
+     "cls": "Suspicious",
+     "score": 55,
+     "ela": 11,
+     "anomalies": 6,
+     "cnn": 0.9999461770057678,
+     "cnnFlag": true,
+     "cnnMs": 1269
+    },
+    {
+     "file": "genuine_02.jpg",
+     "label": "genuine",
+     "seeded": true,
+     "cls": "Genuine",
+     "score": 0,
+     "ela": 14,
+     "anomalies": 7,
+     "cnn": 0.9727608760197958,
+     "cnnFlag": false,
+     "cnnMs": 1298
+    },
+    {
+     "file": "tampered_02.jpg",
+     "label": "tampered",
+     "seeded": true,
+     "cls": "Suspicious",
+     "score": 60,
+     "ela": 10,
+     "anomalies": 5,
+     "cnn": 0.9999181628227234,
+     "cnnFlag": true,
+     "cnnMs": 1208
+    },
+    {
+     "file": "genuine_03.jpg",
+     "label": "genuine",
+     "seeded": true,
+     "cls": "Genuine",
+     "score": 0,
+     "ela": 12,
+     "anomalies": 6,
+     "cnn": 0.9490249355634054,
+     "cnnFlag": false,
+     "cnnMs": 1370
+    },
+    {
+     "file": "tampered_03.jpg",
+     "label": "tampered",
+     "seeded": true,
+     "cls": "Suspicious",
+     "score": 50,
+     "ela": 8,
+     "anomalies": 4,
+     "cnn": 0.9989146788914999,
+     "cnnFlag": true,
+     "cnnMs": 1355
+    },
+    {
+     "file": "genuine_04.jpg",
+     "label": "genuine",
+     "seeded": true,
+     "cls": "Genuine",
+     "score": 0,
+     "ela": 12,
+     "anomalies": 6,
+     "cnn": 0.9677209854125977,
+     "cnnFlag": false,
+     "cnnMs": 1274
+    },
+    {
+     "file": "tampered_04.jpg",
+     "label": "tampered",
+     "seeded": true,
+     "cls": "Suspicious",
+     "score": 55,
+     "ela": 8,
+     "anomalies": 4,
+     "cnn": 0.9996730287869772,
+     "cnnFlag": true,
+     "cnnMs": 1262
+    },
+    {
+     "file": "genuine_05.jpg",
+     "label": "genuine",
+     "seeded": true,
+     "cls": "Suspicious",
+     "score": 30,
+     "ela": 12,
+     "anomalies": 6,
+     "cnn": 0.9818950295448303,
+     "cnnFlag": true,
+     "cnnMs": 1203
+    },
+    {
+     "file": "tampered_05.jpg",
+     "label": "tampered",
+     "seeded": true,
+     "cls": "Suspicious",
+     "score": 60,
+     "ela": 8,
+     "anomalies": 4,
+     "cnn": 0.9999187787373861,
+     "cnnFlag": true,
+     "cnnMs": 1149
+    },
+    {
+     "file": "genuine_06.jpg",
+     "label": "genuine",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 75,
+     "ela": 10,
+     "anomalies": 5,
+     "cnn": 0.9805322090784708,
+     "cnnFlag": true,
+     "cnnMs": 1233
+    },
+    {
+     "file": "tampered_06.jpg",
+     "label": "tampered",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 75,
+     "ela": 4,
+     "anomalies": 2,
+     "cnn": 0.9992121855417887,
+     "cnnFlag": true,
+     "cnnMs": 1102
+    },
+    {
+     "file": "genuine_07.jpg",
+     "label": "genuine",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 75,
+     "ela": 8,
+     "anomalies": 4,
+     "cnn": 0.9925088286399841,
+     "cnnFlag": true,
+     "cnnMs": 1250
+    },
+    {
+     "file": "tampered_07.jpg",
+     "label": "tampered",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 75,
+     "ela": 10,
+     "anomalies": 5,
+     "cnn": 0.9997981389363607,
+     "cnnFlag": true,
+     "cnnMs": 1236
+    },
+    {
+     "file": "genuine_08.jpg",
+     "label": "genuine",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 45,
+     "ela": 10,
+     "anomalies": 5,
+     "cnn": 0.9597673416137695,
+     "cnnFlag": false,
+     "cnnMs": 1211
+    },
+    {
+     "file": "tampered_08.jpg",
+     "label": "tampered",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 75,
+     "ela": 10,
+     "anomalies": 5,
+     "cnn": 0.999916136264801,
+     "cnnFlag": true,
+     "cnnMs": 1217
+    },
+    {
+     "file": "genuine_09.jpg",
+     "label": "genuine",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 75,
+     "ela": 12,
+     "anomalies": 6,
+     "cnn": 0.995012362798055,
+     "cnnFlag": true,
+     "cnnMs": 1252
+    },
+    {
+     "file": "tampered_09.jpg",
+     "label": "tampered",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 75,
+     "ela": 10,
+     "anomalies": 5,
+     "cnn": 0.9989695946375529,
+     "cnnFlag": true,
+     "cnnMs": 1159
+    },
+    {
+     "file": "genuine_10.jpg",
+     "label": "genuine",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 45,
+     "ela": 12,
+     "anomalies": 6,
+     "cnn": 0.96135413646698,
+     "cnnFlag": false,
+     "cnnMs": 1187
+    },
+    {
+     "file": "tampered_10.jpg",
+     "label": "tampered",
+     "seeded": false,
+     "cls": "Suspicious",
+     "score": 75,
+     "ela": 8,
+     "anomalies": 4,
+     "cnn": 0.9998286366462708,
+     "cnnFlag": true,
+     "cnnMs": 1232
+    }
+   ]
+  },
+  "ela": {
+   "meanGenuine": 11.2,
+   "meanTampered": 8.7,
+   "aucTamperedVsGenuine": 0.16
+  },
+  "xaiMs": 36,
+  "cnn": {
+   "evalN": 20,
+   "tamperedFlagged": 10,
+   "tamperedN": 10,
+   "genuineFlagged": 4,
+   "genuineN": 10,
+   "auc": 1,
+   "medianMs": 1235,
+   "heldOut": {
+    "threshold": 0.9801999926567078,
+    "n_test": 1011,
+    "accuracy": 0.9060336300692384,
+    "precision": 0.9288256227758007,
+    "recall": 0.7767857142857143,
+    "f1": 0.8460291734197731,
+    "auc": 0.9452072310405644,
+    "fpr_genuine": 0.0044444444444444444,
+    "fpr_benign": 0.042222222222222223,
+    "recall_by_type": {
+     "copy_paste": 1,
+     "local_blur": 1,
+     "logo_edit": 0.05714285714285714,
+     "seal_edit": 0.9818181818181818,
+     "signature_edit": 0.3958333333333333,
+     "text_date": 0.8157894736842105,
+     "text_name": 1,
+     "text_qual": 0.8717948717948718
+    },
+    "fpr_by_benign": {
+     "benign_blur": 0.01282051282051282,
+     "benign_bright": 0.02127659574468085,
+     "benign_resave": 0,
+     "benign_resize": 0.10416666666666667,
+     "benign_rotate": 0.075
+    },
+    "auc_by_type": {
+     "copy_paste": 1,
+     "local_blur": 1,
+     "logo_edit": 0.754920634920635,
+     "seal_edit": 0.9996767676767676,
+     "signature_edit": 0.8362962962962963,
+     "text_date": 0.9573099415204679,
+     "text_name": 0.9998888888888888,
+     "text_qual": 0.98005698005698
+    },
+    "localisation": 0.9791666666666666,
+    "params": 116369,
+    "train_tiles": 148052
+   }
+  }
+ }
+}

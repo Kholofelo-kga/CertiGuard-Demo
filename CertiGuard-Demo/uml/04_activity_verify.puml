@@ -1,0 +1,66 @@
+@startuml CertiGuard_Activity_Verify
+' CertiGuard - activity diagram (swimlanes): end-to-end verification with override (ISJ107V Assignment 5)
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam activity {
+  BackgroundColor #FFFFFF
+  BorderColor #2F5D8A
+}
+
+|Verification Officer|
+start
+:Log in (email + password);
+|CertiGuard (browser)|
+if (Credentials valid and not locked?) then (no)
+  :Show generic error; audit "Login failed";
+  stop
+else (yes)
+endif
+|Verification Officer|
+:Upload certificate (JPG/PNG/PDF);
+|CertiGuard (browser)|
+if (Extension, size <= 10 MB and\nfile signature valid?) then (no)
+  :Show upload error; audit "Upload rejected";
+  stop
+else (yes)
+endif
+:Compute SHA-256 fingerprint;
+:Enhance image / render PDF pages; <<#E6F5EA>>
+:OCR with Tesseract.js (LSTM); <<#E6F5EA>>
+:Parse fields, detect document type,\nmark uncertain fields;
+|Verification Officer|
+:Review, correct and confirm fields;
+|CertiGuard (browser)|
+if (Fields valid?) then (no)
+  :Show field-level error;
+  stop
+else (yes)
+endif
+if (Academic qualification?) then (no)
+  :Report Unsupported (no verdict);
+else (yes)
+  :Cross-validate 5 fields\nagainst institution record;
+  if (JPG or PNG?) then (yes)
+    :Run tamper CNN on 64x64 tiles\n(ELA shown, weight 0); <<#E6F5EA>>
+  else (PDF)
+  endif
+  :Add up risk factors (0-100);
+  if (Score >= 70 and a field\ncontradicts the record?) then (yes)
+    :Forged;
+  elseif (Score >= 30 or any field\nnot Matched?) then (yes)
+    :Suspicious;
+  else (no)
+    :Genuine;
+  endif
+endif
+:Save request (AES-GCM encrypted);\nappend hash-chained audit entry;
+:Show explainable result\n(factors, evidence boxes, heat-map);
+|Administrator|
+if (Override needed?) then (yes)
+  :Enter decision + justification (>= 10 chars);
+  :Override saved with original class in audit;
+else (no)
+endif
+stop
+@enduml

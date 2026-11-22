@@ -104,7 +104,8 @@
   function ocringView() {
     return layout(`<h1>Verify Certificate</h1>${steps(1)}<div class="panel"><div class="eyebrow">STEP 01</div><h2>Reading the certificate…</h2><p class="sub">The OCR neural network is running locally in your browser (first run loads the language model).</p><div class="progress"><div style="width:${Math.round(S.prog * 100)}%"></div></div><b>${Math.round(S.prog * 100)}%</b></div>`, "verify");
   }
-  function field(l, k, v) {
+  function field(l, k, v, plain) {
+    if (plain) return `<label for="f_${k}">${l}</label><input id="f_${k}" data-in="${k}" maxlength="100" value="${esc(v)}" placeholder="Required" class="${S.errs[k] ? "field-err" : ""}"><div class="err" role="alert">${esc(S.errs[k] || "")}</div>`;   // record form: no OCR evidence
     const c = S.corrected.includes(k) ? ` <span class="badge suspicious">edited</span>` : "";
     const e = S.ev && S.ev[k], chk = e && e.why.length ? ` <span class="badge suspicious">check</span>` : "";
     const src = !v ? `<div class="evid ${k === "name" && S.ocr && S.ocr.meta.nameUnread ? "warn" : ""}">${k === "name" && S.ocr && S.ocr.meta.nameUnread ? "The name was found but could not be read reliably (stylised or low-contrast text). <b>Type it from the document.</b>" : "Not found on the document."}</div>` : e ? `<div class="evid ${e.why.length ? "warn" : ""}">${e.text ? "Read from: “" + esc(e.text) + "”" + (e.conf != null ? " (OCR " + esc(e.conf) + "%)" : "") : "Read from the document text"}${e.why.length ? " — <b>check:</b> " + esc(e.why.join("; ")) : ""}</div>` : "";
@@ -194,8 +195,8 @@
   }
   function recordsView() {
     const adm = Auth.can("records.write"), e = S.errs;
-    return layout(`<div class="eyebrow">REFERENCE DATA</div><h1>Institution Records</h1><p class="sub">Local reference records used for cross-validation (stored in this browser).</p><div class="panel"><table class="table"><tr><th>Certificate ID</th><th>Student</th><th>Qualification</th><th>Institution</th><th>Issued</th><th>Status</th>${adm ? "<th></th>" : ""}</tr>${Store.records().map(r => `<tr><td>${esc(r.number)}</td><td>${esc(r.name)}</td><td>${esc(r.qualification)}</td><td>${esc(r.institution)}</td><td>${esc(r.date)}</td><td>${badge(r.status === "Active" ? "Genuine" : "Suspicious").replace(/>[^<]*</, ">" + esc(r.status) + "<")}</td>${adm ? `<td><button class="link" data-act="toggleRec" data-n="${esc(r.number)}">${r.status === "Active" ? "Deactivate" : "Activate"}</button></td>` : ""}</tr>`).join("")}</table></div>
-    ${adm ? `<div class="panel" style="margin-top:18px"><h3>Add institution record (administrator)</h3><div class="row2"><div>${field("Student name", "name", S.fields?.name || "")}${field("Certificate number", "number", S.fields?.number || "")}${field("Qualification", "qualification", S.fields?.qualification || "")}</div><div>${field("Institution", "institution", S.fields?.institution || "")}${field("Issue date (YYYY-MM-DD)", "date", S.fields?.date || "")}<button class="primary wide" data-act="addRec" style="margin-top:20px">Add record</button></div></div></div>` : ""}`, "records");
+    return layout(`<div class="eyebrow">REFERENCE DATA</div><h1>Institution Records</h1><p class="sub">Local reference records used for cross-validation (stored in this browser).</p><div class="panel"><table class="table"><tr><th>Certificate ID</th><th>Student</th><th>Qualification</th><th>Institution</th><th>Issued</th><th>Status</th>${adm ? "<th></th>" : ""}</tr>${Store.records().map(r => `<tr><td>${esc(r.number)}</td><td>${esc(r.name)}</td><td>${esc(r.qualification)}</td><td>${esc(r.institution)}</td><td>${esc(r.date)}</td><td>${badge(r.status === "Active" ? "Genuine" : "Suspicious").replace(/>[^<]*</, ">" + esc(r.status) + "<")}</td>${adm ? `<td><button class="link" data-act="editRec" data-n="${esc(r.number)}">Edit</button> · <button class="link" data-act="toggleRec" data-n="${esc(r.number)}">${r.status === "Active" ? "Deactivate" : "Activate"}</button></td>` : ""}</tr>`).join("")}</table></div>
+    ${adm ? `<div class="panel" style="margin-top:18px"><h3>${S.editRec ? "Edit institution record " + esc(S.editRec) + " (administrator)" : "Add institution record (administrator)"}</h3><div class="row2"><div>${field("Student name", "name", S.fields?.name || "", true)}${field("Certificate number", "number", S.fields?.number || "", true)}${field("Qualification", "qualification", S.fields?.qualification || "", true)}</div><div>${field("Institution", "institution", S.fields?.institution || "", true)}${field("Issue date (YYYY-MM-DD)", "date", S.fields?.date || "", true)}<button class="primary wide" data-act="${S.editRec ? "saveRec" : "addRec"}" style="margin-top:20px">${S.editRec ? "Save changes" : "Add record"}</button>${S.editRec ? `<button class="secondary wide" data-act="cancelRec" style="margin-top:10px">Cancel</button>` : ""}</div></div></div>` : ""}`, "records");
   }
   function systemView() {
     const rows = [
@@ -205,9 +206,9 @@
       ["Fraud-risk score and explanation", "REAL", "Transparent additive rule model; a rule-based review priority, not a calibrated probability of fraud. Weights are not statistically validated."],
       ["Integrity analysis (ELA)", "REAL, EXPERIMENTAL, NOT SCORED", "Classical error-level analysis with a heat-map. Evaluation showed it does not separate edited from genuine scans, so its weight is 0."],
       ["Tamper-region CNN", "REAL, TRAINED ON SYNTHETIC DATA ONLY", "A 116k-parameter convolutional network trained from scratch (not the planned ResNet-50), exported to ONNX and run in the browser with onnxruntime-web. It scores 64x64 tiles for local edits (text replacement, copy-paste, blur). Held-out synthetic test: see ml/results.json. It has not been tested on real certificates and gives false alarms after resizing or rotating a scan, so a flag means review, not proof."],
-      ["Persistence and audit log", "SIMPLIFIED", "Browser localStorage, not PostgreSQL. The hash chain detects edits to single entries, but anyone who controls the browser storage could rewrite and re-hash the whole history; a server-side append-only log is needed."],
+      ["Persistence and audit log", "SIMPLIFIED", "Browser localStorage, not PostgreSQL. Every store is encrypted at rest with AES-GCM-256 using a non-extractable key kept in IndexedDB on this device. The hash chain detects edits to single entries, but anyone who controls the browser storage could rewrite and re-hash the whole history; a server-side append-only log is needed."],
       ["Authentication / roles", "SIMPLIFIED", "Client-side PBKDF2 check and role permissions. A determined user can bypass client-side checks; production needs a server (FastAPI + JWT)."],
-      ["XAI", "SIMPLIFIED", "Evidence boxes from OCR positions and the factor breakdown. Grad-CAM/SHAP require the trained CNN (future work)."]
+      ["XAI", "SIMPLIFIED", "Evidence boxes from OCR positions, the factor breakdown and the CNN tile-probability heat-map. Grad-CAM/SHAP explanations are future work."]
     ];
     return layout(`<div class="eyebrow">SYSTEM TRANSPARENCY</div><h1>System Information</h1><div class="panel"><table class="table"><tr><th>Component</th><th>Status</th><th>What it does in this prototype</th></tr>${rows.map(r => `<tr><td>${esc(r[0])}</td><td><b>${esc(r[1])}</b></td><td>${esc(r[2])}</td></tr>`).join("")}</table><p class="notice">Fictional sample data only. The prototype has not been validated on real certificates and must not be used for real hiring or admission decisions.</p>${Auth.can("audit") ? `<button class="secondary" data-act="resetAll">Reset demo data</button>` : ""}</div>`, "system");
   }
@@ -315,10 +316,28 @@
   }
   async function addRecord() {
     const f = {}; ["name", "number", "qualification", "institution", "date"].forEach(k => f[k] = ($("#f_" + k)?.value || "").trim()); f.number = f.number.toUpperCase();
+    if (!Auth.can("records.write")) return;
     S.fields = f; S.errs = validateFields(f);
+    ["name", "number", "qualification", "institution", "date"].forEach(k => { if (!f[k] && !S.errs[k]) S.errs[k] = "This field is required for an institution record."; });
     if (!Object.keys(S.errs).length) {
       try { Store.addRecord({ ...f, status: "Active", source: "Added by administrator " + user().email + " on " + new Date().toISOString().slice(0, 10) + " (unverified by the institution)" }); await Store.appendAudit(user().email, "Record added", f.number, "Success", f.institution); S.fields = null; }
       catch (e) { S.errs.number = "A record with this certificate number already exists."; }
+    }
+    render();
+  }
+  async function saveRecord() {
+    if (!Auth.can("records.write")) return;
+    const f = {}; ["name", "number", "qualification", "institution", "date"].forEach(k => f[k] = ($("#f_" + k)?.value || "").trim()); f.number = f.number.toUpperCase();
+    S.fields = f; S.errs = validateFields(f);
+    ["name", "number", "qualification", "institution", "date"].forEach(k => { if (!f[k] && !S.errs[k]) S.errs[k] = "This field is required for an institution record."; });
+    if (!Object.keys(S.errs).length) {
+      const old = Store.findRecord(S.editRec);
+      try {
+        const changed = ["name", "number", "qualification", "institution", "date"].filter(k => old && old[k] !== f[k]);
+        Store.updateRecord(S.editRec, { ...f, source: (old && old.source ? old.source.replace(/; edited by .*$/, "") : "") + "; edited by " + user().email + " on " + new Date().toISOString().slice(0, 10) });
+        await Store.appendAudit(user().email, "Record updated", f.number, "Success", changed.length ? "Changed: " + changed.join(", ") + (S.editRec !== f.number ? " (was " + S.editRec + ")" : "") : "No changes");
+        S.editRec = null; S.fields = null;
+      } catch (e) { S.errs.number = e.message === "DUPLICATE" ? "A record with this certificate number already exists." : "The record could not be found; reload the page."; }
     }
     render();
   }
@@ -347,6 +366,9 @@
     else if (a === "chain") { S.auditCheck = await Store.verifyAuditChain(); render(); }
     else if (a === "export") { await Store.appendAudit(user().email, "Audit export", "-", "Success", "CSV"); exportCsv(); }
     else if (a === "addRec") await addRecord();
+    else if (a === "editRec") { if (!Auth.can("records.write")) return; const r = Store.findRecord(t.dataset.n); if (r) { S.editRec = r.number; S.errs = {}; S.fields = { name: r.name, number: r.number, qualification: r.qualification, institution: r.institution, date: r.date }; render(); } }
+    else if (a === "saveRec") await saveRecord();
+    else if (a === "cancelRec") { S.editRec = null; S.fields = null; S.errs = {}; render(); }
     else if (a === "toggleRec") { if (!Auth.can("records.write")) return; const r = Store.findRecord(t.dataset.n); Store.setRecordStatus(r.number, r.status === "Active" ? "Revoked" : "Active"); await Store.appendAudit(user().email, "Record status changed", r.number, r.status === "Active" ? "Revoked" : "Active", "-"); render(); }
     else if (a === "resetAll") { if (Auth.can("audit")) { Store.resetAll(); await Auth.logout(); S = fresh("login"); render(); } }
   });
@@ -359,6 +381,9 @@
   });
   ["dragover", "drop"].forEach(ev => document.addEventListener(ev, e => { if (!e.target.closest("[data-drop]")) return; e.preventDefault(); if (ev === "drop") setFile(e.dataTransfer.files[0]); }));
 
-  Store.init(); render();
+  Store.init().then(async () => {
+    if (Store.loadErrors.length) { S.msg = "Stored data could not be decrypted or read (" + Store.loadErrors.join(", ") + "); it may have been altered outside CertiGuard. The affected store was set aside and reset."; await Store.appendAudit("system", "Storage integrity failure", "-", "Failed", Store.loadErrors.join(",")); }
+    render();
+  });
   window.__CG = { get state() { return S; } }; // read-only handle used by the automated tests
 })();

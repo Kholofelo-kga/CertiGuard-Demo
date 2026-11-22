@@ -1,0 +1,39 @@
+@startuml CertiGuard_Component_Slide
+' Slide version of 05_component.puml (same components, fewer labels)
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 16
+skinparam componentStyle uml2
+left to right direction
+[Web interface\napp.js] as UI
+package "Services" {
+  [auth.js] as AUTH
+  [ocr.js] as OCR #E6F5EA
+  [tamper.js] as CNN #E6F5EA
+  [ela.js] as ELA
+  [scoring.js] as SC
+  [store.js] as DS
+}
+package "vendor/ (offline)" {
+  [Tesseract.js 5] as TESS
+  [onnxruntime-web] as ORT
+  [pdf.js + jsPDF] as PDF
+}
+database "localStorage\n(encrypted) /\nsessionStorage" as LS
+database "IndexedDB key" as IDB
+artifact "tamper_cnn.onnx" as MODEL
+UI --> AUTH
+UI --> OCR
+UI --> CNN
+UI --> ELA
+UI --> SC
+UI --> DS
+UI --> PDF
+OCR --> TESS
+CNN --> ORT
+CNN --> MODEL
+SC --> DS
+AUTH --> DS
+DS --> LS
+DS --> IDB
+@enduml

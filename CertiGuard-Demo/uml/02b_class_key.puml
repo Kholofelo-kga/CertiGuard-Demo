@@ -1,0 +1,69 @@
+@startuml CertiGuard_Class_Key
+' CertiGuard - key classes for the presentation slide (full model: 02_class.puml)
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 14
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #2F5D8A
+}
+hide empty members
+hide circle
+
+class "OCRService (ocr.js)" as OCR #E6F5EA {
+  +extract(blob) : OCRResult
+}
+class "TamperCNN (tamper.js)" as CNN #E6F5EA {
+  +analyse(blob) : CNNResult
+}
+class "ScoringEngine (scoring.js)" as SC {
+  +crossValidate(fields)
+  +score(xv, ela, ocrConf, cnn)
+}
+class "DataService (store.js)" as DS {
+  AES-GCM encrypted stores
+  +findRecord(number)
+  +saveRequest(req)
+  +appendAudit(...)
+  +verifyAuditChain()
+}
+class VerificationRequest {
+  id, SHA-256 hash
+  score 0..100
+  classification
+  explanation
+  finalClass [0..1]
+}
+class FieldCheck {
+  status: Matched | Mismatched | Not Found
+}
+class RiskFactor {
+  key, points, text
+}
+class InstitutionRecord {
+  number, name, qualification,
+  institution, date, status
+}
+class AuditEntry {
+  user, action, outcome
+  prev, hash
+}
+class User {
+  email, role
+  salt, PBKDF2 hash
+}
+
+OCR ..> VerificationRequest : fields
+CNN ..> VerificationRequest : CNNResult
+SC ..> DS
+SC ..> VerificationRequest : score, class
+DS "1" o-- "0..200" VerificationRequest
+DS "1" o-- "*" InstitutionRecord
+DS "1" o-- "0..500" AuditEntry
+VerificationRequest "1" *-- "0..5" FieldCheck
+VerificationRequest "1" *-- "0..*" RiskFactor
+FieldCheck "*" --> "0..1" InstitutionRecord
+User "1" -- "*" VerificationRequest : performs >
+AuditEntry --> AuditEntry : prev hash
+@enduml

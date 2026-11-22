@@ -1,0 +1,168 @@
+@startuml CertiGuard_Class
+' CertiGuard - final class diagram (ISJ107V Assignment 5)
+' Service classes = JavaScript modules; entity classes = objects stored in localStorage (store.js keys cg.users, cg.records, cg.requests, cg.audit)
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #2F5D8A
+}
+hide empty members
+
+package "Services (JavaScript modules)" #F4F8FC {
+  class AppController <<app.js>> {
+    +setFile(file)
+    +validateFile(file) : string | kind
+    +analyse()
+    +validateFields(f) : errors
+    +confirm()
+    +saveOverride()
+    +addRecord()
+    +saveRecord()
+    +makePdf()
+    +exportCsv()
+  }
+  class Auth <<auth.js>> {
+    -ITER = 100000
+    -MAX_FAILS = 3
+    -LOCK_MS = 30000
+    -IDLE_MS = 15 min
+    +login(email, pw) : result
+    +logout()
+    +session() : Session
+    +can(permission) : bool
+  }
+  class OCRService <<ocr.js>> #E6F5EA {
+    +enhance(blob)
+    +extract(blob) : OCRResult
+    +extractMany(pages) : OCRResult
+    +rereadLine(src, bbox)
+    +detectType(text) : docType
+    +locate(lines, value)
+  }
+  class TamperCNN <<tamper.js>> #E6F5EA {
+    -thr = 0.9811
+    +analyse(blob) : CNNResult
+    +heatmap(result) : canvas
+  }
+  class ELAService <<ela.js>> {
+    +analyse(blob) : ELAResult
+  }
+  class ScoringEngine <<scoring.js>> {
+    -W : weights
+    +crossValidate(fields) : CrossValidation
+    +score(xv, ela, ocrConf, cnn) : ScoreResult
+  }
+  class DataService <<store.js>> {
+    -key : AES-GCM-256 CryptoKey (non-extractable)
+    +encrypted : bool
+    +init() (decrypts stores)
+    +findRecord(number)
+    +addRecord(rec)
+    +updateRecord(oldNumber, rec)
+    +setRecordStatus(number, status)
+    +saveRequest(req)
+    +updateRequest(id, patch)
+    +appendAudit(user, action, certId, outcome, details)
+    +verifyAuditChain() : result
+    +resetAll()
+  }
+}
+
+package "Entities (persisted)" #FFF8E8 {
+  class User {
+    email : string
+    name : string
+    role : Role
+    salt : hex
+    hash : hex, PBKDF2-SHA256
+  }
+  enum Role {
+    Verification Officer
+    Administrator
+  }
+  class InstitutionRecord {
+    number : string
+    name : string
+    qualification : string
+    institution : string
+    date : YYYY-MM-DD
+    status : Active | Revoked
+    source : string
+  }
+  class VerificationRequest {
+    id : CG-YYYY-hash8
+    ts : datetime
+    user : email
+    file : string
+    hash : SHA-256
+    docType : string
+    corrected : string[]
+    ocrConf : int
+    score : 0..100
+    classification : Genuine | Suspicious | Forged | Unsupported
+    explanation : string
+    finalClass : string [0..1]
+    overrideBy, overrideWhy [0..1]
+    ocrMs, elaMs, totalMs : int
+  }
+  class CertificateFields {
+    name, number, qualification,
+    institution, date
+  }
+  class FieldCheck {
+    field : string
+    status : Matched | Mismatched | Not Found
+    expected : string
+  }
+  class CNNResult {
+    available, flagged : bool
+    score : float
+    regions : Region[0..80]
+    ms : int
+  }
+  class ELAResult {
+    available : bool
+    score : float
+    anomalyBlocks : int
+  }
+  class RiskFactor {
+    key : string
+    points : int
+    text : string
+  }
+  class AuditEntry {
+    ts : datetime
+    user, action, certId,
+    outcome, details : string
+    prev : hash
+    hash : SHA-256 of prev + fields
+  }
+}
+
+User --> Role
+AppController ..> Auth
+AppController ..> OCRService
+AppController ..> ScoringEngine
+AppController ..> TamperCNN
+AppController ..> ELAService
+AppController ..> DataService
+ScoringEngine ..> DataService : findRecord()
+Auth ..> DataService : users, appendAudit()
+
+DataService "1" o-- "*" User
+DataService "1" o-- "*" InstitutionRecord
+DataService "1" o-- "0..200" VerificationRequest
+DataService "1" o-- "0..500" AuditEntry
+
+VerificationRequest "1" *-- "1" CertificateFields
+VerificationRequest "1" *-- "0..5" FieldCheck
+VerificationRequest "1" *-- "0..1" CNNResult
+VerificationRequest "1" *-- "0..1" ELAResult
+VerificationRequest "1" *-- "0..*" RiskFactor
+FieldCheck "*" --> "0..1" InstitutionRecord : compared with
+User "1" -- "*" VerificationRequest : performs >
+AuditEntry "*" --> "0..1" AuditEntry : prev (hash chain)
+@enduml

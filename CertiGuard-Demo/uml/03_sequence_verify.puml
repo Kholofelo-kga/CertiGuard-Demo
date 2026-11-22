@@ -1,0 +1,55 @@
+@startuml CertiGuard_Sequence_Verify
+' CertiGuard - sequence diagram: Verify a certificate (demonstrated end-to-end workflow, ISJ107V Assignment 5)
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam sequenceMessageAlign left
+hide footbox
+autonumber
+
+actor "Verification\nOfficer" as VO
+participant "Web interface\n(app.js)" as UI
+participant "OCR service\n(ocr.js +\nTesseract.js worker)" as OCR #E6F5EA
+participant "Scoring engine\n(scoring.js)" as SC
+participant "Tamper CNN\n(tamper.js +\nonnxruntime-web)" as CNN #E6F5EA
+participant "Data service\n(store.js)" as DS
+database "localStorage" as LS
+
+VO -> UI : choose file / sample
+UI -> UI : validateFile(): extension, size <= 10 MB,\nfile signature; SHA-256 fingerprint
+alt invalid file
+  UI -> DS : appendAudit("Upload rejected")
+  UI --> VO : plain error next to the upload box
+else valid file
+  VO -> UI : Analyse
+  UI -> OCR : enhance(blob); extract(blob)\n(PDF: render first 3 pages, extractMany)
+  OCR --> UI : OCRResult(text, fields, lines, confidence, docType)
+  UI --> VO : review screen: fields, source line,\nconfidence, "check" badges
+  VO -> UI : correct fields, tick confirmation, Confirm
+  UI -> UI : validateFields()
+  alt field invalid (e.g. 2026-02-31)
+    UI --> VO : field-level error, stay on review
+  else non-academic document
+    UI -> DS : saveRequest(Unsupported); appendAudit()
+    UI --> VO : Unsupported (no verdict)
+  else valid academic certificate
+    UI -> SC : crossValidate(fields)
+    SC -> DS : findRecord(number)
+    DS -> DS : read decrypted cg.records (memory)
+    DS --> SC : InstitutionRecord | none
+    SC --> UI : 5 x FieldCheck (Matched / Mismatched / Not Found)
+    opt JPG or PNG
+      UI -> UI : ELA.analyse(blob) (heat-map shown, weight 0)
+      UI -> CNN : analyse(blob): 64x64 tiles, ONNX inference
+      CNN --> UI : CNNResult(score, flagged, regions)
+    end
+    UI -> SC : score(xv, ela, ocrConf, cnn)
+    SC --> UI : ScoreResult(score 0-100, class,\nfactors, explanation)
+    UI -> DS : saveRequest(request)
+    DS -> LS : write cg.requests (AES-GCM)
+    UI -> DS : appendAudit("Completed verification")
+    DS -> LS : write cg.audit (hash-chained, AES-GCM)
+    UI --> VO : result: class, risk score, field table,\nfactor bars, evidence boxes, CNN heat-map
+  end
+end
+@enduml
