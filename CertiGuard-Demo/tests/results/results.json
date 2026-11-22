@@ -1,5 +1,5 @@
 {
- "when": "2026-10-31T14:06:29.156Z",
+ "when": "2026-11-21T21:49:31.576Z",
  "base": "http://localhost:8765",
  "tests": [
   {
@@ -175,7 +175,7 @@
    "area": "Reporting",
    "name": "Download the verification report as a PDF (FR-09)",
    "expected": "A real PDF file is downloaded containing reference, outcome, fields, explanation and evidence image; download is audited",
-   "actual": "file CertiGuard_Report_CG-2026-B52F48A5.pdf, 83590 bytes, header %PDF-, image embedded=true, audited=true",
+   "actual": "file CertiGuard_Report_CG-2026-B52F48A5.pdf, 83591 bytes, header %PDF-, image embedded=true, audited=true",
    "status": "Pass"
   },
   {
@@ -183,7 +183,7 @@
    "area": "XAI",
    "name": "Heat-map and text explanation within 2 s of the CNN result (ETR-03 / FR-08)",
    "expected": "CNN heat-map can be shown on the document; explanation + heat-map ready < 2000 ms after the CNN finished",
-   "actual": "heat-map overlay shown=true; text explanation + heat-map ready 33 ms after CNN",
+   "actual": "heat-map overlay shown=true; text explanation + heat-map ready 34 ms after CNN",
    "status": "Pass"
   },
   {
@@ -193,29 +193,77 @@
    "expected": "All pages read; name and institution taken from the document, not from sample data",
    "actual": "3 pages read; fields: Thando Ndlovu | UL-2025-77821 | Bachelor of Information Science | University of Limpopo | 2025-12-10",
    "status": "Pass"
+  },
+  {
+   "id": "TC-25",
+   "area": "Data",
+   "name": "Edit an institution record (FR-11 update)",
+   "expected": "Duplicate number refused; valid edit saved, audit-logged and used by the next cross-validation",
+   "actual": "duplicate: \"A record with this certificate number already exists.\"; saved name=Themba Ndlovu; audit=\"Record updated / Changed: name\"; next verification: name Matched, Suspicious 30/100",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-26",
+   "area": "Data",
+   "name": "Deactivate an institution record (FR-11)",
+   "expected": "Status Revoked, audit-logged; a certificate with that number is no longer Genuine",
+   "actual": "status=Revoked; audit=\"Record status changed / Revoked\"; sample 1 now Suspicious 45/100 (record re-activated afterwards)",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-27",
+   "area": "Validation",
+   "name": "Add an institution record with a required field missing (FR-11)",
+   "expected": "Rejected with a required-field message; record count unchanged",
+   "actual": "\"This field is required for an institution record.\"; records 5->5",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-30",
+   "area": "Security",
+   "name": "Stored data is encrypted at rest and tampering with it is detected (NFR-04)",
+   "expected": "localStorage holds only AES-GCM ciphertext (no names readable); altered ciphertext fails authentication on load, is reported to the user and audit-logged",
+   "actual": "4/4 stores encrypted=true; plaintext names found=false; after altering 1 byte: loadErrors=[\"cg.records\"], message shown, audit=\"Storage integrity failure\"",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-28",
+   "area": "Reliability",
+   "name": "Committed records survive a browser restart (NFR-03)",
+   "expected": "After closing and relaunching the browser, verification history and audit trail are still present and the chain is intact",
+   "actual": "requests 1->1, audit 2->2 (+login); ✓ Audit chain intact: 3 entries verified.",
+   "status": "Pass"
+  },
+  {
+   "id": "TC-29",
+   "area": "Performance",
+   "name": "20 concurrent users load the application from the host (NFR-02)",
+   "expected": "Every user receives every file the app needs; 95% of users fully loaded within 10 s",
+   "actual": "20 files (18.9 MB) per user; median 2037 ms, p95 2129 ms; failed requests 0; 100% within 10 s",
+   "status": "Pass"
   }
  ],
  "pageErrors": [],
  "quant": {
   "latency": {
    "n": 10,
-   "coldTotalMs": 8575,
+   "coldTotalMs": 8549,
    "warmTotalMs": [
-    6730,
-    6690,
-    6785,
-    7202,
-    6638,
-    6827,
-    6669,
-    6756,
-    7173
+    6798,
+    6830,
+    6812,
+    7337,
+    7431,
+    7280,
+    7334,
+    7255,
+    7373
    ],
-   "warmMedianMs": 6756,
-   "warmP95Ms": 7202,
-   "warmMaxMs": 7202,
-   "warmOcrMedianMs": 1104,
-   "warmElaMedianMs": 1077,
+   "warmMedianMs": 7280,
+   "warmP95Ms": 7431,
+   "warmMaxMs": 7431,
+   "warmOcrMedianMs": 1195,
+   "warmElaMedianMs": 1091,
    "under10sPct": 100
   },
   "taskCompletion": {
@@ -311,7 +359,7 @@
      "anomalies": 5,
      "cnn": 0.9157981872558594,
      "cnnFlag": false,
-     "cnnMs": 1146
+     "cnnMs": 1367
     },
     {
      "file": "tampered_01.jpg",
@@ -323,7 +371,7 @@
      "anomalies": 6,
      "cnn": 0.9695235292116801,
      "cnnFlag": false,
-     "cnnMs": 1115
+     "cnnMs": 1389
     },
     {
      "file": "genuine_02.jpg",
@@ -335,7 +383,7 @@
      "anomalies": 7,
      "cnn": 0.9393956462542216,
      "cnnFlag": false,
-     "cnnMs": 1118
+     "cnnMs": 1265
     },
     {
      "file": "tampered_02.jpg",
@@ -347,7 +395,7 @@
      "anomalies": 5,
      "cnn": 0.9986348946889242,
      "cnnFlag": true,
-     "cnnMs": 1079
+     "cnnMs": 1167
     },
     {
      "file": "genuine_03.jpg",
@@ -359,7 +407,7 @@
      "anomalies": 6,
      "cnn": 0.9642559091250101,
      "cnnFlag": false,
-     "cnnMs": 1080
+     "cnnMs": 1339
     },
     {
      "file": "tampered_03.jpg",
@@ -371,7 +419,7 @@
      "anomalies": 4,
      "cnn": 0.9887930552164713,
      "cnnFlag": true,
-     "cnnMs": 1081
+     "cnnMs": 1264
     },
     {
      "file": "genuine_04.jpg",
@@ -383,7 +431,7 @@
      "anomalies": 6,
      "cnn": 0.9436591466267904,
      "cnnFlag": false,
-     "cnnMs": 1110
+     "cnnMs": 1150
     },
     {
      "file": "tampered_04.jpg",
@@ -395,7 +443,7 @@
      "anomalies": 4,
      "cnn": 0.981786827246348,
      "cnnFlag": true,
-     "cnnMs": 1103
+     "cnnMs": 1195
     },
     {
      "file": "genuine_05.jpg",
@@ -407,7 +455,7 @@
      "anomalies": 6,
      "cnn": 0.9576290051142374,
      "cnnFlag": false,
-     "cnnMs": 1089
+     "cnnMs": 1200
     },
     {
      "file": "tampered_05.jpg",
@@ -419,7 +467,7 @@
      "anomalies": 4,
      "cnn": 0.9993194540341696,
      "cnnFlag": true,
-     "cnnMs": 1173
+     "cnnMs": 1319
     },
     {
      "file": "genuine_06.jpg",
@@ -431,7 +479,7 @@
      "anomalies": 5,
      "cnn": 0.8787785172462463,
      "cnnFlag": false,
-     "cnnMs": 1284
+     "cnnMs": 1159
     },
     {
      "file": "tampered_06.jpg",
@@ -443,7 +491,7 @@
      "anomalies": 2,
      "cnn": 0.9963755210240682,
      "cnnFlag": true,
-     "cnnMs": 1137
+     "cnnMs": 1162
     },
     {
      "file": "genuine_07.jpg",
@@ -455,7 +503,7 @@
      "anomalies": 4,
      "cnn": 0.974165161450704,
      "cnnFlag": false,
-     "cnnMs": 1095
+     "cnnMs": 1127
     },
     {
      "file": "tampered_07.jpg",
@@ -467,7 +515,7 @@
      "anomalies": 5,
      "cnn": 0.9767259359359741,
      "cnnFlag": false,
-     "cnnMs": 1175
+     "cnnMs": 1196
     },
     {
      "file": "genuine_08.jpg",
@@ -479,7 +527,7 @@
      "anomalies": 5,
      "cnn": 0.944772481918335,
      "cnnFlag": false,
-     "cnnMs": 1173
+     "cnnMs": 1200
     },
     {
      "file": "tampered_08.jpg",
@@ -491,7 +539,7 @@
      "anomalies": 5,
      "cnn": 0.998748242855072,
      "cnnFlag": true,
-     "cnnMs": 1177
+     "cnnMs": 1188
     },
     {
      "file": "genuine_09.jpg",
@@ -503,7 +551,7 @@
      "anomalies": 6,
      "cnn": 0.956887682278951,
      "cnnFlag": false,
-     "cnnMs": 1162
+     "cnnMs": 1215
     },
     {
      "file": "tampered_09.jpg",
@@ -515,7 +563,7 @@
      "anomalies": 5,
      "cnn": 0.9963436524073283,
      "cnnFlag": true,
-     "cnnMs": 1093
+     "cnnMs": 1351
     },
     {
      "file": "genuine_10.jpg",
@@ -527,7 +575,7 @@
      "anomalies": 6,
      "cnn": 0.9407094319661459,
      "cnnFlag": false,
-     "cnnMs": 1147
+     "cnnMs": 1107
     },
     {
      "file": "tampered_10.jpg",
@@ -539,7 +587,7 @@
      "anomalies": 4,
      "cnn": 0.9704195459683737,
      "cnnFlag": false,
-     "cnnMs": 1146
+     "cnnMs": 1209
     }
    ]
   },
@@ -548,7 +596,7 @@
    "meanTampered": 8.7,
    "aucTamperedVsGenuine": 0.16
   },
-  "xaiMs": 33,
+  "xaiMs": 34,
   "cnn": {
    "evalN": 20,
    "tamperedFlagged": 7,
@@ -556,7 +604,7 @@
    "genuineFlagged": 0,
    "genuineN": 10,
    "auc": 0.98,
-   "medianMs": 1137,
+   "medianMs": 1200,
    "heldOut": {
     "threshold": 0.9811000227928162,
     "n_test": 600,
@@ -598,6 +646,16 @@
     "params": 116369,
     "train_tiles": 88962
    }
+  },
+  "concurrency": {
+   "users": 20,
+   "filesPerUser": 20,
+   "mbPerUser": 18.9,
+   "medianMs": 2037,
+   "p95Ms": 2129,
+   "maxMs": 2151,
+   "failedRequests": 0,
+   "within10sPct": 100
   }
  }
 }

@@ -1,5 +1,5 @@
 /* CertiGuard v2 - automated test and evaluation run (Playwright, headless Chromium).
-   Usage:  1) serve the project folder:   python3 -m http.server 8080
+   Usage:  1) serve the project folder:   python3 tests/serve.py 8080   (or python3 -m http.server 8080)
            2) in another terminal:        npm i playwright && npx playwright install chromium
                                           BASE_URL=http://localhost:8080 node tests/run-tests.js
    Writes tests/results/results.json and tests/results/shots/*.png                                   */
@@ -35,7 +35,7 @@ async function runFlow(p, sample, { shots } = {}) {
   const cls = (await p.textContent(".resultHero h1")).trim().replace("Unsupported document", "Unsupported"); const rk = await p.$(".risk"); const score = rk ? +(await rk.textContent()).replace(/\D.*$/, "") : 0;
   return { cls, score };
 }
-const lsAudit = p => p.evaluate(() => JSON.parse(localStorage.getItem("cg.audit") || "[]"));
+const lsAudit = p => p.evaluate(() => CG.Store.audit());
 async function tc(id, area, name, expected, fn) {
   let actual = "", ok = false;
   try { const r = await fn(); actual = r.actual; ok = r.ok; } catch (e) { actual = "Exception: " + String(e.message).slice(0, 120); }
@@ -132,20 +132,20 @@ const b64 = f => fs.readFileSync(path.join(ROOT, f)).toString("base64");
     return { ok: /at least 10/.test(e1) && a.action === "Administrator override" && a.outcome === "Forged", actual: `empty -> "${e1}"; saved: ${a.action} / ${a.outcome} / "${a.details.slice(0, 50)}..."` };
   });
   await tc("TC-15", "Persistence", "Reload the page and check stored data", "History, records and audit trail still present after reload", async () => {
-    const before = await p.evaluate(() => [JSON.parse(localStorage.getItem("cg.requests")).length, JSON.parse(localStorage.getItem("cg.audit")).length]);
-    await p.reload(); const after = await p.evaluate(() => [JSON.parse(localStorage.getItem("cg.requests")).length, JSON.parse(localStorage.getItem("cg.audit")).length]);
+    const before = await p.evaluate(() => [CG.Store.requests().length, CG.Store.audit().length]);
+    await p.evaluate(() => CG.Store.flush()); await p.reload(); await p.waitForFunction(() => window.CG && CG.Store.users().length > 0); const after = await p.evaluate(() => [CG.Store.requests().length, CG.Store.audit().length]);
     return { ok: after[0] === before[0] && after[0] >= 4 && after[1] === before[1], actual: `requests ${before[0]}->${after[0]}, audit entries ${before[1]}->${after[1]}` };
   });
   await tc("TC-16", "Security", "Audit-chain tamper detection", "Editing a stored audit entry is detected by 'Verify chain integrity'", async () => {
     await open(p, "Audit Trail"); await p.click("[data-act=chain]"); await p.waitForSelector("[role=status]"); const ok1 = await p.textContent("[role=status]");
-    await p.evaluate(() => { const a = JSON.parse(localStorage.getItem("cg.audit")); a[a.length - 2].outcome = "Edited"; localStorage.setItem("cg.audit", JSON.stringify(a)); });
+    await p.evaluate(async () => { const a = CG.Store.audit(); a[a.length - 2].outcome = "Edited"; await CG.Store._debugReplace("audit", a); });
     await open(p, "Audit Trail"); await p.click("[data-act=chain]"); await p.waitForFunction(() => /BROKEN/.test(document.querySelector("[role=status]")?.textContent || "")); const ok2 = await p.textContent("[role=status]");
     return { ok: /intact/.test(ok1) && /BROKEN/.test(ok2), actual: `before edit: "${ok1.trim()}" | after edit: "${ok2.trim().slice(0, 60)}..."` };
   });
   await tc("TC-17", "Data", "Add an institution record with a duplicate certificate number", "Rejected with duplicate message; record count unchanged", async () => {
-    await open(p, "Institution Records"); const n0 = await p.evaluate(() => JSON.parse(localStorage.getItem("cg.records")).length);
+    await open(p, "Institution Records"); const n0 = await p.evaluate(() => CG.Store.records().length);
     await p.fill("#f_name", "Test Person"); await p.fill("#f_number", "TUT-2026-10482"); await p.fill("#f_qualification", "Diploma in Testing"); await p.fill("#f_institution", "Tshwane University of Technology"); await p.fill("#f_date", "2026-01-15");
-    await p.click("[data-act=addRec]"); await p.waitForSelector(".field-err"); const m = await p.textContent("#f_number + .err"); const n1 = await p.evaluate(() => JSON.parse(localStorage.getItem("cg.records")).length);
+    await p.click("[data-act=addRec]"); await p.waitForSelector(".field-err"); const m = await p.textContent("#f_number + .err"); const n1 = await p.evaluate(() => CG.Store.records().length);
     await p.screenshot({ path: path.join(SH, "s7_records.png") });
     return { ok: /already exists/.test(m) && n0 === n1, actual: `"${m}"; records ${n0}->${n1}` };
   });
@@ -193,7 +193,7 @@ const b64 = f => fs.readFileSync(path.join(ROOT, f)).toString("base64");
   // Q1: pipeline latency (cold start = first run in a new page, then 9 warm runs)
   p = await fresh(browser, ADMIN); const times = [];
   for (let i = 0; i < 10; i++) { if (i) await p.click("[data-act=reset]"); await runFlow(p, S1); }
-  const reqs = await p.evaluate(() => JSON.parse(localStorage.getItem("cg.requests")).map(r => ({ total: r.totalMs, ocr: r.ocrMs, ela: r.elaMs })).reverse());
+  const reqs = await p.evaluate(() => CG.Store.requests().map(r => ({ total: r.totalMs, ocr: r.ocrMs, ela: r.elaMs })).reverse());
   quant.latency = { n: reqs.length, coldTotalMs: reqs[0].total, warmTotalMs: reqs.slice(1).map(r => r.total), warmMedianMs: median(reqs.slice(1).map(r => r.total)), warmP95Ms: pct(reqs.slice(1).map(r => r.total), 95), warmMaxMs: Math.max(...reqs.slice(1).map(r => r.total)), warmOcrMedianMs: median(reqs.slice(1).map(r => r.ocr)), warmElaMedianMs: median(reqs.slice(1).map(r => r.ela)), under10sPct: Math.round(100 * reqs.filter(r => r.total <= 10000).length / reqs.length) };
   quant.taskCompletion = { attempts: 10, completed: reqs.length };
   console.log("LATENCY", JSON.stringify(quant.latency));
@@ -234,7 +234,69 @@ const b64 = f => fs.readFileSync(path.join(ROOT, f)).toString("base64");
   quant.cnn = { evalN: cls.length, tamperedFlagged: tm.filter(c => c.cnnFlag).length, tamperedN: tm.length, genuineFlagged: g.filter(c => c.cnnFlag).length, genuineN: g.length, auc: auc(tm.map(c => c.cnn), g.map(c => c.cnn)), medianMs: cls.map(c => c.cnnMs).sort((x, y) => x - y)[Math.floor(cls.length / 2)], heldOut: JSON.parse(fs.readFileSync(path.join(ROOT, "ml/results.json"))) };
   console.log("CNN", JSON.stringify({ ...quant.cnn, heldOut: undefined }));
   console.log("CLASSIFICATION", JSON.stringify({ ...quant.classification, rows: undefined }), "ELA", JSON.stringify(quant.ela));
+  await p.close();
+
+  // ---------- Assignment 5 additions: FR-11 update/deactivate, NFR-03 restart, NFR-02 concurrent users ----------
+  const recs = q => q.evaluate(() => CG.Store.records());
+  const fillRec = async (q, r) => { for (const k of ["name", "number", "qualification", "institution", "date"]) await q.fill("#f_" + k, r[k]); };
+  p = await fresh(browser, ADMIN);
+  await tc("TC-25", "Data", "Edit an institution record (FR-11 update)", "Duplicate number refused; valid edit saved, audit-logged and used by the next cross-validation", async () => {
+    await open(p, "Institution Records"); await p.click('[data-act=editRec][data-n="UL-2025-77821"]'); await p.waitForSelector("[data-act=saveRec]");
+    await p.fill("#f_number", "TUT-2026-10482"); await p.click("[data-act=saveRec]"); await p.waitForSelector(".field-err"); const dup = await p.textContent("#f_number + .err");
+    await p.fill("#f_number", "UL-2025-77821"); await p.fill("#f_name", "Themba Ndlovu"); await p.click("[data-act=saveRec]"); await p.waitForSelector("[data-act=addRec]");
+    const r = (await recs(p)).find(x => x.number === "UL-2025-77821"); const a = (await lsAudit(p))[0];
+    await p.screenshot({ path: path.join(SH, "s14_record_edit.png") });
+    const res = await runFlow(p, S2); const nameSt = await p.evaluate(() => CG.Store.requests()[0].xv.fields.name.status);
+    return { ok: /already exists/.test(dup) && r.name === "Themba Ndlovu" && a.action === "Record updated" && nameSt === "Matched", actual: `duplicate: "${dup}"; saved name=${r.name}; audit="${a.action} / ${a.details}"; next verification: name ${nameSt}, ${res.cls} ${res.score}/100` };
+  });
+  await tc("TC-26", "Data", "Deactivate an institution record (FR-11)", "Status Revoked, audit-logged; a certificate with that number is no longer Genuine", async () => {
+    await open(p, "Institution Records"); await p.click('[data-act=toggleRec][data-n="TUT-2026-10482"]'); await p.waitForTimeout(300);
+    const st = (await recs(p)).find(x => x.number === "TUT-2026-10482").status; const a = (await lsAudit(p))[0];
+    const res = await runFlow(p, S1); await open(p, "Institution Records"); await p.click('[data-act=toggleRec][data-n="TUT-2026-10482"]'); await p.waitForTimeout(300);
+    return { ok: st === "Revoked" && a.action === "Record status changed" && res.cls !== "Genuine", actual: `status=${st}; audit="${a.action} / ${a.outcome}"; sample 1 now ${res.cls} ${res.score}/100 (record re-activated afterwards)` };
+  });
+  await tc("TC-27", "Validation", "Add an institution record with a required field missing (FR-11)", "Rejected with a required-field message; record count unchanged", async () => {
+    await open(p, "Institution Records"); const n0 = (await recs(p)).length;
+    await fillRec(p, { name: "Test Person", number: "TST-2026-00001", qualification: "", institution: "Test Institute", date: "2026-01-15" }); await p.click("[data-act=addRec]"); await p.waitForSelector(".field-err");
+    const m = await p.textContent("#f_qualification + .err"); const n1 = (await recs(p)).length;
+    return { ok: /required/.test(m) && n0 === n1, actual: `"${m}"; records ${n0}->${n1}` };
+  });
+  await tc("TC-30", "Security", "Stored data is encrypted at rest and tampering with it is detected (NFR-04)", "localStorage holds only AES-GCM ciphertext (no names readable); altered ciphertext fails authentication on load, is reported to the user and audit-logged", async () => {
+    await p.evaluate(() => CG.Store.flush());
+    const raw = await p.evaluate(() => ["cg.users", "cg.records", "cg.requests", "cg.audit"].map(k => localStorage.getItem(k)));
+    const allEnc = raw.every(v => v && v.startsWith("cgenc1:")), leak = raw.some(v => /Lerato|Mokoena|administrator@/.test(v));
+    await p.evaluate(() => { const v = localStorage.getItem("cg.records"); localStorage.setItem("cg.records", v.slice(0, 40) + (v[40] === "A" ? "B" : "A") + v.slice(41)); });
+    await p.reload(); await p.waitForFunction(() => window.CG && CG.Store.users().length > 0); await p.waitForSelector("[role=alert]:not(:empty)");
+    const msg = (await p.textContent("[role=alert]")).trim(); const a = (await lsAudit(p))[0]; const errs = await p.evaluate(() => CG.Store.loadErrors);
+    return { ok: allEnc && !leak && errs.includes("cg.records") && /could not be decrypted/.test(msg) && a.action === "Storage integrity failure", actual: `4/4 stores encrypted=${allEnc}; plaintext names found=${leak}; after altering 1 byte: loadErrors=${JSON.stringify(errs)}, message shown, audit="${a.action}"` };
+  });
   await p.close(); await browser.close();
+
+  await tc("TC-28", "Reliability", "Committed records survive a browser restart (NFR-03)", "After closing and relaunching the browser, verification history and audit trail are still present and the chain is intact", async () => {
+    const dir = fs.mkdtempSync(path.join(require("os").tmpdir(), "cg-restart-"));
+    let ctx = await pw.chromium.launchPersistentContext(dir, { viewport: { width: 1440, height: 900 } }); let q = ctx.pages()[0] || await ctx.newPage();
+    await q.goto(BASE + "/index.html"); await login(q, ADMIN); await runFlow(q, S1);
+    const before = await q.evaluate(() => [CG.Store.requests().length, CG.Store.audit().length]);
+    await q.evaluate(() => CG.Store.flush());
+    await ctx.close();   // the whole browser process ends here (simulated restart)
+    ctx = await pw.chromium.launchPersistentContext(dir, { viewport: { width: 1440, height: 900 } }); q = ctx.pages()[0] || await ctx.newPage();
+    await q.goto(BASE + "/index.html"); await q.waitForFunction(() => window.CG && CG.Store.users().length > 0); const after = await q.evaluate(() => [CG.Store.requests().length, CG.Store.audit().length]);
+    if (!(await q.$(".online"))) await login(q, ADMIN);
+    await open(q, "Audit Trail"); await q.click("[data-act=chain]"); await q.waitForSelector("[role=status]"); const chain = (await q.textContent("[role=status]")).trim();
+    await ctx.close();
+    return { ok: after[0] === before[0] && after[1] >= before[1] && /intact/.test(chain), actual: `requests ${before[0]}->${after[0]}, audit ${before[1]}->${after[1]} (+login); ${chain}` };
+  });
+
+  await tc("TC-29", "Performance", "20 concurrent users load the application from the host (NFR-02)", "Every user receives every file the app needs; 95% of users fully loaded within 10 s", async () => {
+    const b2 = await pw.chromium.launch(); const ctx = await b2.newContext(); const q = await ctx.newPage(); const urls = new Set();
+    q.on("request", r => { if (r.url().startsWith(BASE)) urls.add(r.url()); });
+    await q.goto(BASE + "/index.html"); await login(q, ADMIN); await runFlow(q, S1); await b2.close();
+    // each virtual user downloads every file the app needed, over 6 parallel connections like a browser; a failed request counts as a failure
+    const list = [...urls]; const one = async () => { const t0 = Date.now(); let bytes = 0, bad = 0, i = 0; const worker = async () => { while (i < list.length) { const u = list[i++]; try { const r = await fetch(u, { cache: "no-store" }); const b = await r.arrayBuffer(); bytes += b.byteLength; if (!r.ok) bad++; } catch (e) { bad++; } } }; await Promise.all(Array.from({ length: 6 }, worker)); return { ms: Date.now() - t0, bytes, bad }; };
+    const runs = await Promise.all(Array.from({ length: 20 }, one)); const ms = runs.map(r => r.ms);
+    quant.concurrency = { users: 20, filesPerUser: list.length, mbPerUser: +(runs[0].bytes / 1048576).toFixed(1), medianMs: median(ms), p95Ms: pct(ms, 95), maxMs: Math.max(...ms), failedRequests: runs.reduce((a, r) => a + r.bad, 0), within10sPct: Math.round(100 * ms.filter(x => x <= 10000).length / ms.length) };
+    return { ok: quant.concurrency.failedRequests === 0 && quant.concurrency.within10sPct >= 95, actual: `${list.length} files (${quant.concurrency.mbPerUser} MB) per user; median ${quant.concurrency.medianMs} ms, p95 ${quant.concurrency.p95Ms} ms; failed requests ${quant.concurrency.failedRequests}; ${quant.concurrency.within10sPct}% within 10 s` };
+  });
 
   const pass = results.filter(r => r.status === "Pass").length;
   fs.writeFileSync(path.join(OUT, "results.json"), JSON.stringify({ when: new Date().toISOString(), base: BASE, tests: results, pageErrors, quant }, null, 1));
